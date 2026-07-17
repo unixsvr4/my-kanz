@@ -27,11 +27,16 @@ python3 -m http.server -d app 8000   # → http://localhost:8000
 ```
 
 Deploy for $0: push `app/index.html` to GitHub Pages, Cloudflare Pages, Netlify, or
-an S3 bucket. It is one static file with zero external requests in its default mode.
+an S3 bucket. It is one static file with zero external requests in its default mode
+(the only on-demand fetches are pdf.js when a .pdf is uploaded, and api.anthropic.com
+when the user runs the BYOK AI coach).
 
 ## What it does
 
-1. **Paste a job description + your resume** (or press the two *Load sample* buttons).
+1. **Paste a job description + your resume** (or press the two *Load sample*
+   buttons). Both panes also accept **.txt/.md/.pdf uploads** — PDFs are parsed
+   client-side with pdf.js (lazy-loaded from a CDN only at that moment; the
+   extracted text never leaves the browser).
 2. **Analyze match** → instant deterministic ATS-style score:
    - **Keywords 70%** — harmonic mean of (a) coverage of a curated 130-term
      SRE/DevOps/cloud skill dictionary with aliases (`k8s`→kubernetes,

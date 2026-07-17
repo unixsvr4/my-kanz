@@ -185,8 +185,9 @@
       <textarea id="jd" spellcheck="false" placeholder="Paste the job description here…"></textarea>
       <div class="toolrow">
         <button class="btn-ghost" id="jdSample">Load sample JD</button>
-        <label class="btn btn-ghost" for="jdFile">Upload .txt/.md</label>
-        <input type="file" id="jdFile" accept=".txt,.md">
+        <label class="btn btn-ghost" for="jdFile">Upload .txt/.md/.pdf</label>
+        <input type="file" id="jdFile" accept=".txt,.md,.pdf">
+        <span class="hint" id="jdFileStatus"></span>
       </div>
     </div>
     <div class="card">
@@ -195,8 +196,9 @@
       <textarea id="rz" spellcheck="false" placeholder="Paste your resume here…"></textarea>
       <div class="toolrow">
         <button class="btn-ghost" id="rzSample">Load sample resume</button>
-        <label class="btn btn-ghost" for="rzFile">Upload .txt/.md</label>
-        <input type="file" id="rzFile" accept=".txt,.md">
+        <label class="btn btn-ghost" for="rzFile">Upload .txt/.md/.pdf</label>
+        <input type="file" id="rzFile" accept=".txt,.md,.pdf">
+        <span class="hint" id="rzFileStatus"></span>
       </div>
     </div>
   </div>
@@ -596,16 +598,79 @@ $("themeBtn").onclick = () => {
   r.dataset.theme = dark ? "light" : "dark";
 };
 
-function hookFile(inputId, taId) {
-  $(inputId).addEventListener("change", e => {
+/* ---- file loading: .txt/.md read directly; .pdf via pdf.js -----------
+   pdf.js (Mozilla, Apache-2.0) is lazy-loaded from the cdnjs CDN ONLY at
+   the moment a .pdf is selected — the default app flow still makes zero
+   external requests. The extracted text gets the same ligature repair
+   (NFKC: ﬁ→fi, ﬂ→fl …) the parent Python engine applies before scoring. */
+const PDFJS_VER = "3.11.174";
+const PDFJS_BASE = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VER}`;
+let pdfjsReady = null;
+function loadPdfJs() {
+  if (pdfjsReady) return pdfjsReady;
+  pdfjsReady = new Promise((res, rej) => {
+    const s = document.createElement("script");
+    s.src = `${PDFJS_BASE}/pdf.min.js`;
+    s.onload = () => {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = `${PDFJS_BASE}/pdf.worker.min.js`;
+      res(window.pdfjsLib);
+    };
+    s.onerror = () => { pdfjsReady = null; rej(new Error("could not load pdf.js (offline? ad-blocker?)")); };
+    document.head.appendChild(s);
+  });
+  return pdfjsReady;
+}
+
+async function extractPdfText(arrayBuffer) {
+  const pdfjs = await loadPdfJs();
+  const doc = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+  const pages = [];
+  for (let p = 1; p <= doc.numPages; p++) {
+    const content = await (await doc.getPage(p)).getTextContent();
+    // rebuild lines: newline when the glyph baseline (transform[5]) moves,
+    // or when pdf.js flags an explicit EOL
+    let text = "", lastY = null;
+    for (const it of content.items) {
+      if (!("str" in it)) continue;
+      const y = it.transform ? it.transform[5] : null;
+      if (lastY !== null && y !== null && Math.abs(y - lastY) > 2) text += "\n";
+      text += it.str;
+      if (it.hasEOL) text += "\n";
+      else if (it.str && !it.str.endsWith(" ")) text += " ";
+      if (y !== null) lastY = y;
+    }
+    pages.push(text);
+  }
+  // NFKC folds Unicode ligature chars (ﬁ ﬂ ﬀ …) back to plain letters
+  return pages.join("\n\n").normalize("NFKC").replace(/[ \t]+\n/g, "\n").replace(/[ \t]{2,}/g, " ").trim();
+}
+
+function hookFile(inputId, taId, statusId) {
+  $(inputId).addEventListener("change", async e => {
     const f = e.target.files[0];
     if (!f) return;
-    const rd = new FileReader();
-    rd.onload = () => { $(taId).value = rd.result; };
-    rd.readAsText(f);
+    const status = $(statusId);
+    if (/\.pdf$/i.test(f.name) || f.type === "application/pdf") {
+      status.textContent = "extracting PDF…";
+      try {
+        const buf = await f.arrayBuffer();
+        const text = await extractPdfText(buf);
+        if (!text) throw new Error("no extractable text (scanned/image-only PDF?)");
+        $(taId).value = text;
+        status.textContent = `✓ ${f.name} (${text.split(/\s+/).length} words)`;
+      } catch (err) {
+        status.textContent = "";
+        alert("PDF extraction failed: " + err.message + "\nTip: export/paste the text version instead.");
+      }
+    } else {
+      const rd = new FileReader();
+      rd.onload = () => { $(taId).value = rd.result; status.textContent = `✓ ${f.name}`; };
+      rd.readAsText(f);
+    }
+    e.target.value = "";   // allow re-selecting the same file
   });
 }
-hookFile("jdFile", "jd"); hookFile("rzFile", "rz");
+hookFile("jdFile", "jd", "jdFileStatus"); hookFile("rzFile", "rz", "rzFileStatus");
 
 const SAMPLE_JD = `Senior Site Reliability Engineer — CloudScale Inc (Remote, US)
 

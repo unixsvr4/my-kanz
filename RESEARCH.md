@@ -149,6 +149,7 @@ node /tmp/kanzmatch_test.js
 |---|---|---|---|---|---|
 | Sample SRE JD × sample SRE resume | **88.1%** | 81.1% (C=84.1, D=78.3) | 100% | 100% (8y vs 5y req.) | PASS ✅ |
 | Sample SRE JD × unrelated marketing resume (negative control) | **17.3%** | low | partial | fail | FAIL ✅ |
+| Sample SRE JD × **same resume as a PDF** (cupsfilter-generated, parsed by the app's pdf.js path in Node with `pdfjs-dist@3.11.174`) | **88.1%** | 82.9% | 100% | 100% | PASS ✅ — PDF path ≡ text path |
 
 Residual "missing" list for the positive case — `iac, capacity planning,
 chaos engineering, multi-region, networking, security, tcp/ip, soc 2 compliance` —
@@ -219,6 +220,32 @@ analogous legal-boilerplate filter).
   system-prompt discipline, because a hiring-platform judge will probe for
   hallucinated credentials.
 
+### 4.1 PDF upload (added 2026-07-17)
+
+Both panes accept `.pdf`. Design decisions:
+
+- **Parser**: Mozilla **pdf.js 3.11.174** (Apache-2.0) rather than a hand-rolled
+  extractor — resume PDFs from Google Docs/Word routinely use `Identity-H`
+  encodings with `ToUnicode` CMaps that a minimal parser garbles, and demo-day
+  reliability beats purity. The 3.x line is used because it exposes a classic
+  `<script>` global (`pdfjsLib`); 4.x is ESM-only and would force a build step.
+- **Lazy CDN load**: the script tag is injected the first time a `.pdf` is
+  selected (cdnjs, `loadPdfJs()` memoized promise). Default flow stays
+  zero-external-request; failure (offline/ad-blocker) surfaces a clear message
+  with a "paste the text instead" fallback tip. Parsing itself is 100%
+  client-side — the PDF bytes never leave the browser.
+- **Line reconstruction**: pdf.js returns positioned glyph runs, not lines.
+  Lines are rebuilt by emitting `\n` when the baseline (`transform[5]`) moves
+  by >2pt or the item carries `hasEOL` — this preserves bullets and section
+  headings, which the structure checks (≥6 bullet lines) depend on.
+- **Ligature repair**: extracted text is `normalize("NFKC")`-folded (ﬁ→fi,
+  ﬂ→fl …), mirroring `ats_checking.py`'s `_repair_ligatures` so PDF typography
+  can't silently break keyword matches like "profile"/"certified".
+- **Verified** (see §3.1 last row): the sample resume rendered to a real PDF via
+  `cupsfilter`, parsed with the same code in Node, scores **88.1%** — byte-path
+  parity with the plain-text run, zero structure-check regressions. Scanned
+  (image-only) PDFs yield no text and produce an explicit error, not a silent 0%.
+
 ## 5. UI / dataviz decisions
 
 - Score display follows the validated reference dataviz palette: single-hue blue
@@ -255,10 +282,11 @@ moves is the user's own opt-in API spend, displayed per-run in the UI.
 - Re-run validation: §3 command. Manual E2E: `python3 -m http.server -d app 8000`,
   load samples, Analyze, then exercise the three AI tabs with a real key.
 - Future work: (a) re-validate the JS port against the full 533-JD corpus and
-  report per-JD score deltas vs the Python engine; (b) client-side PDF text
-  extraction (pdf.js) with the parent engine's ligature-repair table;
+  report per-JD score deltas vs the Python engine; (b) ~~client-side PDF text
+  extraction~~ — **shipped** (§4.1); next step is OCR fallback for scanned PDFs;
   (c) Arabic-language JD support (Kanz's home market) — the dynamic extractor is
-  Latin-script-biased today; (d) Web Worker offload for very large corpora.
+  Latin-script-biased today; (d) Web Worker offload for very large corpora;
+  (e) vendor `pdf.min.js` alongside `index.html` for fully-offline PDF parsing.
 
 ## 8. Tooling disclosure
 
