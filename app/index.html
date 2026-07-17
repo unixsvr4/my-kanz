@@ -185,8 +185,8 @@
       <textarea id="jd" spellcheck="false" placeholder="Paste the job description here…"></textarea>
       <div class="toolrow">
         <button class="btn-ghost" id="jdSample">Load sample JD</button>
-        <label class="btn btn-ghost" for="jdFile">Upload .txt/.md/.pdf</label>
-        <input type="file" id="jdFile" accept=".txt,.md,.pdf">
+        <label class="btn btn-ghost" for="jdFile">Upload .txt/.md/.pdf/.docx</label>
+        <input type="file" id="jdFile" accept=".txt,.md,.pdf,.docx">
         <span class="hint" id="jdFileStatus"></span>
       </div>
     </div>
@@ -196,8 +196,8 @@
       <textarea id="rz" spellcheck="false" placeholder="Paste your resume here…"></textarea>
       <div class="toolrow">
         <button class="btn-ghost" id="rzSample">Load sample resume</button>
-        <label class="btn btn-ghost" for="rzFile">Upload .txt/.md/.pdf</label>
-        <input type="file" id="rzFile" accept=".txt,.md,.pdf">
+        <label class="btn btn-ghost" for="rzFile">Upload .txt/.md/.pdf/.docx</label>
+        <input type="file" id="rzFile" accept=".txt,.md,.pdf,.docx">
         <span class="hint" id="rzFileStatus"></span>
       </div>
     </div>
@@ -660,22 +660,114 @@ async function extractPdfText(arrayBuffer) {
   return pages.join("\n\n").normalize("NFKC").replace(/[ \t]+\n/g, "\n").replace(/[ \t]{2,}/g, " ").trim();
 }
 
+/* ---- .docx extraction: zero-dependency, fully offline ----------------
+   A .docx is a ZIP whose word/document.xml holds the text as OOXML.
+   We walk the ZIP central directory ourselves, inflate the entry with the
+   browser-native DecompressionStream("deflate-raw"), and reconstruct
+   paragraphs with regex over the well-formed OOXML — <w:p> = paragraph,
+   <w:t> = text run, <w:numPr> = list item (rendered "- " so the structure
+   checks still see bullets). Nothing loads, nothing leaves the browser,
+   nothing is stored. Legacy binary .doc is NOT a ZIP and is rejected with
+   a save-as-.docx tip. */
+function zipFindEntry(buf, wanted) {
+  const dv = new DataView(buf), u8 = new Uint8Array(buf), td = new TextDecoder();
+  // locate End Of Central Directory record (sig 0x06054b50), scanning back past any comment
+  let eocd = -1;
+  for (let i = buf.byteLength - 22; i >= Math.max(0, buf.byteLength - 22 - 65535); i--)
+    if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  if (eocd < 0) throw new Error("not a .docx (ZIP directory not found)");
+  const count = dv.getUint16(eocd + 10, true);
+  let off = dv.getUint32(eocd + 16, true);
+  for (let n = 0; n < count; n++) {
+    if (dv.getUint32(off, true) !== 0x02014b50) break;
+    const method  = dv.getUint16(off + 10, true);
+    const csize   = dv.getUint32(off + 20, true);
+    const nameLen = dv.getUint16(off + 28, true);
+    const extraLen = dv.getUint16(off + 30, true);
+    const cmtLen  = dv.getUint16(off + 32, true);
+    const lho     = dv.getUint32(off + 42, true);
+    const name    = td.decode(u8.subarray(off + 46, off + 46 + nameLen));
+    if (name === wanted) {
+      // local header: its own name/extra lengths can differ from the central ones
+      const lNameLen = dv.getUint16(lho + 26, true);
+      const lExtraLen = dv.getUint16(lho + 28, true);
+      const start = lho + 30 + lNameLen + lExtraLen;
+      return { method, bytes: u8.subarray(start, start + csize) };
+    }
+    off += 46 + nameLen + extraLen + cmtLen;
+  }
+  throw new Error("word/document.xml not found inside the .docx");
+}
+
+async function inflateEntry(entry) {
+  if (entry.method === 0) return new TextDecoder().decode(entry.bytes);       // stored
+  if (entry.method !== 8) throw new Error("unsupported ZIP compression method " + entry.method);
+  const stream = new Blob([entry.bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+  return await new Response(stream).text();                                    // UTF-8 decode
+}
+
+function decodeXmlEntities(s) {
+  return s.replace(/&(amp|lt|gt|quot|apos|#x?[0-9a-fA-F]+);/g, (m, e) => {
+    if (e === "amp") return "&"; if (e === "lt") return "<"; if (e === "gt") return ">";
+    if (e === "quot") return '"'; if (e === "apos") return "'";
+    return String.fromCodePoint(e[1] === "x" || e[1] === "X" ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10));
+  });
+}
+
+function docxXmlToText(xml) {
+  const paras = [];
+  for (const pm of xml.matchAll(/<w:p[ >][\s\S]*?<\/w:p>|<w:p\/>/g)) {
+    const p = pm[0];
+    let line = "";
+    for (const rm of p.matchAll(/<w:t(?:[^>]*)>([\s\S]*?)<\/w:t>|<w:tab\/>|<w:br\/>/g)) {
+      if (rm[0].startsWith("<w:tab")) line += " ";
+      else if (rm[0].startsWith("<w:br")) line += "\n";
+      else line += decodeXmlEntities(rm[1]);
+    }
+    // list item → "- " bullet: direct numbering (<w:numPr>, Word UI bullets)
+    // or a List* paragraph style (python-docx / template-styled bullets)
+    if ((/<w:numPr[ >/]/.test(p) || /<w:pStyle w:val="List/.test(p)) && line.trim())
+      line = "- " + line;
+    paras.push(line);
+  }
+  return paras.join("\n").normalize("NFKC").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+async function extractDocxText(arrayBuffer) {
+  const dv = new DataView(arrayBuffer);
+  if (arrayBuffer.byteLength < 4 || dv.getUint32(0, true) !== 0x04034b50) {
+    // 0xD0CF11E0 = legacy OLE .doc container
+    if (arrayBuffer.byteLength >= 4 && dv.getUint32(0, false) === 0xD0CF11E0)
+      throw new Error("this is a legacy .doc file — in Word use File → Save As → .docx");
+    throw new Error("not a valid .docx file");
+  }
+  const xml = await inflateEntry(zipFindEntry(arrayBuffer, "word/document.xml"));
+  const text = docxXmlToText(xml);
+  if (!text) throw new Error("no text found in the document");
+  return text;
+}
+
 function hookFile(inputId, taId, statusId) {
   $(inputId).addEventListener("change", async e => {
     const f = e.target.files[0];
     if (!f) return;
     const status = $(statusId);
-    if (/\.pdf$/i.test(f.name) || f.type === "application/pdf") {
-      status.textContent = "extracting PDF…";
+    const isPdf = /\.pdf$/i.test(f.name) || f.type === "application/pdf";
+    const isDocx = /\.docx$/i.test(f.name) ||
+      f.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    const isDoc = /\.doc$/i.test(f.name) && !isDocx;
+    if (isPdf || isDocx || isDoc) {
+      const kind = isPdf ? "PDF" : "Word";
+      status.textContent = `extracting ${kind}…`;
       try {
         const buf = await f.arrayBuffer();
-        const text = await extractPdfText(buf);
-        if (!text) throw new Error("no extractable text (scanned/image-only PDF?)");
+        const text = isPdf ? await extractPdfText(buf) : await extractDocxText(buf);
+        if (!text) throw new Error(isPdf ? "no extractable text (scanned/image-only PDF?)" : "no text found");
         $(taId).value = text;
         status.textContent = `✓ ${f.name} (${text.split(/\s+/).length} words)`;
       } catch (err) {
         status.textContent = "";
-        alert("PDF extraction failed: " + err.message + "\nTip: export/paste the text version instead.");
+        alert(`${kind} extraction failed: ` + err.message + "\nTip: export/paste the text version instead.");
       }
     } else {
       const rd = new FileReader();

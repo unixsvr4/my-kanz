@@ -150,6 +150,7 @@ node /tmp/kanzmatch_test.js
 | Sample SRE JD × sample SRE resume | **88.1%** | 81.1% (C=84.1, D=78.3) | 100% | 100% (8y vs 5y req.) | PASS ✅ |
 | Sample SRE JD × unrelated marketing resume (negative control) | **17.3%** | low | partial | fail | FAIL ✅ |
 | Sample SRE JD × **same resume as a PDF** (cupsfilter-generated, parsed by the app's pdf.js path in Node with `pdfjs-dist@3.11.174`) | **88.1%** | 82.9% | 100% | 100% | PASS ✅ — PDF path ≡ text path |
+| Sample SRE JD × **same resume as a .docx** (python-docx-generated with `List Bullet` styles + entity edge cases, parsed by the app's built-in ZIP/OOXML extractor in Node) | **88.1%** | — | 100% (10 bullet lines reconstructed) | 100% | PASS ✅ — DOCX path ≡ text path |
 
 Residual "missing" list for the positive case — `iac, capacity planning,
 chaos engineering, multi-region, networking, security, tcp/ip, soc 2 compliance` —
@@ -255,6 +256,41 @@ Both panes accept `.pdf`. Design decisions:
   `pdf.worker.min.js`) extracts the full 190 words with all sentinel tokens
   intact, and a local `http.server` serve returns both files at the exact
   relative URLs the loader requests (HTTP 200; 320,004 and 1,087,212 bytes).
+
+### 4.2 Word .docx upload (added 2026-07-17, for Windows/Word users)
+
+Both panes accept `.docx`, parsed by a **built-in zero-dependency extractor** —
+no library, no network, no storage; the file bytes never leave the browser.
+
+- **Why hand-rolled here but pdf.js for PDF**: a `.docx` is just a ZIP whose
+  `word/document.xml` holds the text in one well-specified XML schema (OOXML),
+  so a complete extractor is ~70 lines; PDF text extraction, by contrast,
+  requires font/CMap machinery that justifies a real library.
+- **ZIP layer**: the extractor scans back for the End-Of-Central-Directory
+  record (sig `0x06054b50`, tolerating trailing comments), walks the central
+  directory to find `word/document.xml`, re-reads name/extra lengths from the
+  *local* header (they may legally differ), and inflates method-8 entries with
+  the **browser-native `DecompressionStream("deflate-raw")`** (Chrome 103+/
+  Safari 16.4+/Firefox 113+ — universal by 2026). Method-0 (stored) supported;
+  anything else errors explicitly.
+- **OOXML layer**: paragraphs (`<w:p>`) become lines; runs concatenate `<w:t>`
+  text with `<w:tab/>`→space and `<w:br/>`→newline; XML entities (named +
+  numeric) are decoded. **List items become `- ` bullets** when the paragraph
+  carries either direct numbering (`<w:numPr>`, Word-UI bullets) *or* a
+  `List*` paragraph style (`<w:pStyle w:val="ListBullet"/>` — how python-docx
+  and many templates encode bullets) — critical because the structure score
+  counts bullet lines. Regex over the XML is safe here because OOXML emitted
+  by Word/python-docx is machine-generated and canonical; no DOMParser needed,
+  which also lets the identical code run in the Node validation harness.
+- **Legacy `.doc` detection**: the OLE container signature (`0xD0CF11E0`) is
+  recognized and rejected with an actionable message ("in Word use File →
+  Save As → .docx") instead of a confusing ZIP error.
+- **Verified** (§3.1 last row): the sample resume regenerated as a real
+  `.docx` via python-docx with `List Bullet` styles plus an entity-torture
+  bullet (`R&D: cost < $500k & uptime > 99.9% — “quoted”`) round-trips
+  perfectly — 10 bullet lines reconstructed, all sentinel tokens and decoded
+  entities intact, **88.1%** score parity with the plain-text path, and the
+  legacy-.doc negative control produces the save-as tip.
 
 ## 5. UI / dataviz decisions
 

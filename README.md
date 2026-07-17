@@ -39,9 +39,11 @@ make besides that fallback is api.anthropic.com when the user runs the BYOK coac
 ## What it does
 
 1. **Paste a job description + your resume** (or press the two *Load sample*
-   buttons). Both panes also accept **.txt/.md/.pdf uploads** — PDFs are parsed
-   client-side with the vendored pdf.js (lazy-loaded from `vendor/` only at that
-   moment, fully offline; the PDF bytes never leave the browser).
+   buttons). Both panes also accept **.txt/.md/.pdf/.docx uploads**, all parsed
+   client-side and fully offline: PDFs via the vendored pdf.js (lazy-loaded from
+   `vendor/` only at that moment), Word .docx via a built-in zero-dependency
+   parser (native `DecompressionStream` + OOXML paragraph reconstruction).
+   File bytes never leave the browser and are never stored.
 2. **Analyze match** → instant deterministic ATS-style score:
    - **Keywords 70%** — harmonic mean of (a) coverage of a curated 130-term
      SRE/DevOps/cloud skill dictionary with aliases (`k8s`→kubernetes,
