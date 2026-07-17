@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KanzMatch — AI Resume ↔ Job Match Analyzer</title>
+<style>
+  /* ------------------------------------------------------------------
+     Theme tokens (light default, dark via [data-theme] or OS setting)
+     Palette follows the validated reference dataviz palette.
+     ------------------------------------------------------------------ */
+  :root {
+    color-scheme: light;
+    --page:       #f9f9f7;
+    --surface:    #fcfcfb;
+    --ink:        #0b0b0b;
+    --ink-2:      #52514e;
+    --muted:      #898781;
+    --grid:       #e1e0d9;
+    --border:     rgba(11,11,11,0.10);
+    --accent:     #2a78d6;   /* series blue, light step */
+    --accent-2:   #1c5cab;
+    --bar-track:  #e1e0d9;
+    --good:       #0ca30c;
+    --good-text:  #006300;
+    --critical:   #d03b3b;
+    --warning:    #fab219;
+    --chip-good-bg: rgba(12,163,12,0.10);
+    --chip-bad-bg:  rgba(208,59,59,0.10);
+    --code-bg:    #f0efec;
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page:       #0d0d0d;
+    --surface:    #1a1a19;
+    --ink:        #ffffff;
+    --ink-2:      #c3c2b7;
+    --muted:      #898781;
+    --grid:       #2c2c2a;
+    --border:     rgba(255,255,255,0.10);
+    --accent:     #3987e5;   /* series blue, dark step */
+    --accent-2:   #86b6ef;
+    --bar-track:  #2c2c2a;
+    --good:       #0ca30c;
+    --good-text:  #0ca30c;
+    --critical:   #e66767;
+    --chip-good-bg: rgba(12,163,12,0.16);
+    --chip-bad-bg:  rgba(230,103,103,0.14);
+    --code-bg:    #232322;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7;
+      --grid: #2c2c2a; --border: rgba(255,255,255,0.10);
+      --accent: #3987e5; --accent-2: #86b6ef; --bar-track: #2c2c2a;
+      --good-text: #0ca30c; --critical: #e66767;
+      --chip-good-bg: rgba(12,163,12,0.16); --chip-bad-bg: rgba(230,103,103,0.14);
+      --code-bg: #232322;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--page); color: var(--ink);
+    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 1080px; margin: 0 auto; padding: 0 20px 80px; }
+
+  header {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    padding: 22px 0 8px;
+  }
+  .logo { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
+  .logo span { color: var(--accent); }
+  .tag { color: var(--ink-2); font-size: 13.5px; }
+  .spacer { flex: 1; }
+  .privacy {
+    font-size: 12.5px; color: var(--good-text); border: 1px solid var(--border);
+    background: var(--chip-good-bg); border-radius: 999px; padding: 4px 12px;
+  }
+  button, .btn {
+    font: inherit; cursor: pointer; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--surface); color: var(--ink);
+    padding: 8px 14px;
+  }
+  button:hover { border-color: var(--accent); }
+  .btn-primary {
+    background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 650;
+    padding: 10px 22px; font-size: 15.5px;
+  }
+  .btn-primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  .btn-ghost { background: transparent; font-size: 13px; padding: 5px 10px; color: var(--ink-2); }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 780px) { .grid2 { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px 18px; margin-top: 16px;
+  }
+  .card h2 { margin: 0 0 6px; font-size: 15px; letter-spacing: 0.01em; }
+  .card .sub { color: var(--muted); font-size: 12.5px; margin-bottom: 10px; }
+  textarea {
+    width: 100%; min-height: 220px; resize: vertical; border-radius: 8px;
+    border: 1px solid var(--grid); background: var(--page); color: var(--ink);
+    font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; padding: 10px;
+  }
+  textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .toolrow { display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+  .toolrow label { font-size: 12.5px; color: var(--ink-2); }
+  input[type=file] { display: none; }
+
+  .actions { display: flex; gap: 12px; align-items: center; margin-top: 18px; flex-wrap: wrap; }
+  .hint { color: var(--muted); font-size: 12.5px; }
+
+  /* --------------------- results --------------------- */
+  #results { display: none; }
+  .scorehead { display: flex; gap: 28px; align-items: center; flex-wrap: wrap; }
+  .hero { text-align: center; min-width: 150px; }
+  .hero .num { font-size: 56px; font-weight: 800; line-height: 1; letter-spacing: -0.02em; }
+  .hero .verdict { font-size: 13px; font-weight: 700; margin-top: 6px; }
+  .verdict.pass { color: var(--good-text); }
+  .verdict.fail { color: var(--critical); }
+  .bars { flex: 1; min-width: 260px; display: grid; gap: 12px; }
+  .barrow { display: grid; grid-template-columns: 150px 1fr 52px; gap: 10px; align-items: center; }
+  .barrow .lbl { font-size: 13px; color: var(--ink-2); }
+  .barrow .val { font-size: 13px; text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); }
+  .track { height: 10px; border-radius: 4px; background: var(--bar-track); overflow: hidden; }
+  .fill { height: 100%; border-radius: 4px; background: var(--accent); width: 0;
+          transition: width 700ms cubic-bezier(.2,.8,.2,1); }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chip {
+    font-size: 12.5px; border-radius: 999px; padding: 3px 10px; border: 1px solid var(--border);
+  }
+  .chip.have { background: var(--chip-good-bg); color: var(--good-text); }
+  .chip.miss { background: var(--chip-bad-bg); color: var(--critical); }
+  .chip .w { opacity: 0.65; font-size: 11px; }
+
+  .checklist { list-style: none; margin: 8px 0 0; padding: 0; font-size: 13.5px; }
+  .checklist li { padding: 3px 0; }
+  .ok::before  { content: "✓ "; color: var(--good-text); font-weight: 700; }
+  .bad::before { content: "✗ "; color: var(--critical); font-weight: 700; }
+
+  /* --------------------- AI panel --------------------- */
+  .tabs { display: flex; gap: 6px; margin: 10px 0 12px; flex-wrap: wrap; }
+  .tab {
+    border-radius: 999px; padding: 6px 14px; font-size: 13.5px;
+    border: 1px solid var(--border); background: transparent; color: var(--ink-2);
+  }
+  .tab[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 650; }
+  .keyrow { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+  .keyrow input[type=password], .keyrow select {
+    font: inherit; font-size: 13px; padding: 7px 10px; border-radius: 8px;
+    border: 1px solid var(--grid); background: var(--page); color: var(--ink);
+  }
+  .keyrow input[type=password] { flex: 1; min-width: 220px; }
+  #aiOut {
+    white-space: pre-wrap; background: var(--code-bg); border-radius: 8px;
+    padding: 14px; font-size: 13.5px; min-height: 90px; border: 1px solid var(--border);
+  }
+  #aiOut:empty::before { content: "AI output streams here — pick a feature and press Run."; color: var(--muted); }
+  .costline { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .err { color: var(--critical); font-size: 13px; margin-top: 8px; }
+
+  footer { margin-top: 40px; color: var(--muted); font-size: 12.5px; border-top: 1px solid var(--grid); padding-top: 14px; }
+  footer b { color: var(--ink-2); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="logo">Kanz<span>Match</span></div>
+    <div class="tag">AI resume ↔ job-description fit analyzer · scores locally, coaches with Claude</div>
+    <div class="spacer"></div>
+    <div class="privacy">🔒 Your resume never leaves this device*</div>
+    <button id="themeBtn" class="btn-ghost" title="Toggle theme">◐ Theme</button>
+  </header>
+
+  <div class="grid2">
+    <div class="card">
+      <h2>1 · Job description</h2>
+      <div class="sub">Paste the posting, or load the built-in sample.</div>
+      <textarea id="jd" spellcheck="false" placeholder="Paste the job description here…"></textarea>
+      <div class="toolrow">
+        <button class="btn-ghost" id="jdSample">Load sample JD</button>
+        <label class="btn btn-ghost" for="jdFile">Upload .txt/.md</label>
+        <input type="file" id="jdFile" accept=".txt,.md">
+      </div>
+    </div>
+    <div class="card">
+      <h2>2 · Your resume</h2>
+      <div class="sub">Plain text works best (export your resume as .txt or .md).</div>
+      <textarea id="rz" spellcheck="false" placeholder="Paste your resume here…"></textarea>
+      <div class="toolrow">
+        <button class="btn-ghost" id="rzSample">Load sample resume</button>
+        <label class="btn btn-ghost" for="rzFile">Upload .txt/.md</label>
+        <input type="file" id="rzFile" accept=".txt,.md">
+      </div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn-primary" id="run">Analyze match</button>
+    <span class="hint">Instant, offline, $0 — the deterministic score runs entirely in your browser.</span>
+  </div>
+
+  <!-- ============================ RESULTS ============================ -->
+  <section id="results">
+    <div class="card">
+      <h2>Match score</h2>
+      <div class="sub">Weighted: keywords 70% (harmonic mean of curated + JD-specific phrases) · structure 15% · experience 15% · pass ≥ 80%</div>
+      <div class="scorehead">
+        <div class="hero">
+          <div class="num" id="scoreNum">–</div>
+          <div class="verdict" id="scoreVerdict"></div>
+        </div>
+        <div class="bars">
+          <div class="barrow"><span class="lbl">Keyword match (70%)</span><div class="track"><div class="fill" id="barKw"></div></div><span class="val" id="valKw">–</span></div>
+          <div class="barrow"><span class="lbl">Structure (15%)</span><div class="track"><div class="fill" id="barSt"></div></div><span class="val" id="valSt">–</span></div>
+          <div class="barrow"><span class="lbl">Experience (15%)</span><div class="track"><div class="fill" id="barYr"></div></div><span class="val" id="valYr">–</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h2>✓ Matched keywords</h2>
+        <div class="sub" id="haveCount"></div>
+        <div class="chips" id="haveChips"></div>
+      </div>
+      <div class="card">
+        <h2>✗ Missing keywords</h2>
+        <div class="sub" id="missCount"></div>
+        <div class="chips" id="missChips"></div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h2>Structure checks</h2>
+        <ul class="checklist" id="structList"></ul>
+      </div>
+      <div class="card">
+        <h2>Experience</h2>
+        <ul class="checklist" id="yearsList"></ul>
+      </div>
+    </div>
+
+    <!-- ============================ AI PANEL ============================ -->
+    <div class="card">
+      <h2>3 · AI coach <span style="font-weight:400;color:var(--muted)">(optional — bring your own Anthropic API key)</span></h2>
+      <div class="sub">The key is used directly from your browser to api.anthropic.com and stored only in this tab (never sent anywhere else). Each run costs fractions of a cent.</div>
+      <div class="keyrow">
+        <input type="password" id="apiKey" placeholder="sk-ant-…  (Anthropic API key)" autocomplete="off">
+        <select id="model">
+          <option value="claude-opus-4-8" selected>Claude Opus 4.8 (best)</option>
+          <option value="claude-haiku-4-5">Claude Haiku 4.5 (economy)</option>
+        </select>
+        <label style="font-size:12px;color:var(--muted)"><input type="checkbox" id="rememberKey"> remember key (this browser)</label>
+      </div>
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" aria-selected="true"  data-f="summary">✍️ Rewrite my summary</button>
+        <button class="tab" role="tab" aria-selected="false" data-f="gaps">🧭 Gap-closing plan</button>
+        <button class="tab" role="tab" aria-selected="false" data-f="cover">✉️ Cover-letter opener</button>
+      </div>
+      <div class="toolrow" style="margin:0 0 10px">
+        <button class="btn-primary" id="aiRun">Run AI feature</button>
+        <button class="btn-ghost" id="aiStop" style="display:none">Stop</button>
+      </div>
+      <div id="aiOut" aria-live="polite"></div>
+      <div class="err" id="aiErr"></div>
+      <div class="costline" id="aiCost"></div>
+    </div>
+  </section>
+
+  <footer>
+    <b>Cost model:</b> static single file (host anywhere free — GitHub Pages, Cloudflare Pages, S3), $0 servers, $0 database,
+    $0 default inference (scoring is deterministic + client-side). AI coach is opt-in BYOK.
+    <br>*The deterministic analyzer is fully offline. The optional AI coach sends the JD + resume to Anthropic's API with <i>your</i> key, at your request.
+    <br>Built for the Kanz AI Training Hackathon 2026 · scoring engine derived from an open ~1,900-line Python ATS checker tuned on a 533-JD corpus.
+  </footer>
+</main>
+
+<script>
+"use strict";
+/* =====================================================================
+   KanzMatch — client-side ATS scoring engine
+   A faithful (simplified) JavaScript port of the architecture of
+   ats_checking.py:
+     score = 0.70 * keywords + 0.15 * structure + 0.15 * years
+   keywords = harmonic mean of (curated-dictionary coverage,
+              weighted dynamic JD-phrase coverage).
+   Dynamic phrases: skill-list lines, punctuated tech tokens, Title-Case
+   proper nouns (down-weighted 0.5), with stopword + double-count filters.
+   ===================================================================== */
+
+/* ---------------- curated keyword dictionary (canonical -> aliases) --- */
+const KEYWORD_DB = {
+  "Cloud": {
+    "aws": ["aws", "amazon web services"], "azure": ["azure", "microsoft azure"],
+    "gcp": ["gcp", "google cloud", "google cloud platform"],
+    "ec2": ["ec2"], "s3": ["s3"], "lambda": ["lambda", "aws lambda"],
+    "eks": ["eks", "amazon eks", "elastic kubernetes service"],
+    "ecs": ["ecs"], "vpc": ["vpc", "vpcs"], "rds": ["rds", "aurora"],
+    "iam": ["iam"], "cloudwatch": ["cloudwatch"], "cloudfront": ["cloudfront"],
+    "route 53": ["route 53", "route53"], "dynamodb": ["dynamodb"],
+    "multi-region": ["multi-region", "multi region"], "serverless": ["serverless"],
+    "hybrid cloud": ["hybrid cloud"], "multi-cloud": ["multi-cloud", "multi cloud"],
+    "oci": ["oci", "oracle cloud"],
+  },
+  "Containers & Orchestration": {
+    "kubernetes": ["kubernetes", "k8s"], "docker": ["docker", "containerization", "containers", "container"],
+    "helm": ["helm"], "istio": ["istio", "service mesh"], "argocd": ["argocd", "argo cd"],
+    "karpenter": ["karpenter"], "autoscaling": ["autoscaling", "auto-scaling", "auto scaling", "hpa"],
+    "kustomize": ["kustomize"], "containerd": ["containerd"],
+  },
+  "CI/CD & Automation": {
+    "ci/cd": ["ci/cd", "cicd", "ci-cd", "continuous integration", "continuous delivery", "continuous deployment"],
+    "jenkins": ["jenkins"], "github actions": ["github actions"], "gitlab": ["gitlab", "gitlab ci"],
+    "git": ["git", "version control"], "automation": ["automation", "automate", "automated"],
+    "gitops": ["gitops"], "circleci": ["circleci"], "spinnaker": ["spinnaker"],
+  },
+  "Infrastructure as Code": {
+    "terraform": ["terraform"], "ansible": ["ansible"], "cloudformation": ["cloudformation"],
+    "iac": ["iac", "infrastructure as code", "infrastructure-as-code"], "pulumi": ["pulumi"],
+    "packer": ["packer"], "puppet": ["puppet"], "chef": ["chef"],
+  },
+  "Observability": {
+    "prometheus": ["prometheus"], "grafana": ["grafana"], "datadog": ["datadog"],
+    "monitoring": ["monitoring", "monitor"], "logging": ["logging", "log aggregation"],
+    "alerting": ["alerting", "alerts"], "observability": ["observability"],
+    "elk": ["elk", "elasticsearch", "kibana", "logstash"], "splunk": ["splunk"],
+    "opentelemetry": ["opentelemetry", "otel"], "tracing": ["tracing", "distributed tracing"],
+    "new relic": ["new relic", "newrelic"], "nagios": ["nagios"], "slo": ["slo", "slos", "service level objective"],
+    "sli": ["sli", "slis"], "sla": ["sla", "slas"],
+  },
+  "SRE Practices": {
+    "sre": ["sre", "site reliability"], "incident response": ["incident response", "incident management"],
+    "on-call": ["on-call", "on call", "oncall", "pagerduty"], "postmortem": ["postmortem", "post-mortem", "root cause analysis", "rca"],
+    "reliability": ["reliability"], "high availability": ["high availability", "ha", "highly available"],
+    "disaster recovery": ["disaster recovery", "dr"], "capacity planning": ["capacity planning"],
+    "chaos engineering": ["chaos engineering", "chaos"], "runbook": ["runbook", "runbooks"],
+    "toil": ["toil", "toil reduction"], "error budget": ["error budget", "error budgets"],
+  },
+  "Languages & Scripting": {
+    "python": ["python"], "go": ["go", "golang"], "bash": ["bash", "shell scripting", "shell"],
+    "java": ["java"], "javascript": ["javascript", "node.js", "nodejs", "node"],
+    "typescript": ["typescript"], "powershell": ["powershell"], "c++": ["c++"],
+    "rust": ["rust"], "ruby": ["ruby"], "sql": ["sql"], "yaml": ["yaml"], "json": ["json"],
+  },
+  "Data & Messaging": {
+    "kafka": ["kafka"], "postgresql": ["postgresql", "postgres"], "mysql": ["mysql"],
+    "redis": ["redis"], "mongodb": ["mongodb", "mongo"], "rabbitmq": ["rabbitmq"],
+    "airflow": ["airflow"], "spark": ["spark"], "cassandra": ["cassandra"],
+  },
+  "OS & Networking": {
+    "linux": ["linux", "unix", "rhel", "ubuntu", "centos"], "networking": ["networking", "network"],
+    "dns": ["dns"], "tcp/ip": ["tcp/ip", "tcp"], "http": ["http", "https"],
+    "load balancing": ["load balancing", "load balancer", "load balancers", "nginx", "haproxy"],
+    "vpn": ["vpn"], "firewall": ["firewall", "firewalls"], "windows": ["windows server", "windows"],
+  },
+  "Security & Compliance": {
+    "security": ["security", "devsecops"], "encryption": ["encryption", "tls", "ssl"],
+    "compliance": ["compliance", "soc 2", "soc2", "hipaa", "pci", "fedramp"],
+    "vault": ["vault", "secrets management", "secrets"], "zero trust": ["zero trust", "zero-trust"],
+    "vulnerability": ["vulnerability", "vulnerability management", "cve"],
+    "authentication": ["authentication", "oauth", "sso", "saml"], "audit": ["audit", "auditing"],
+  },
+  "AI/ML Ops": {
+    "mlops": ["mlops", "ml ops"], "llm": ["llm", "llms", "large language model"],
+    "gpu": ["gpu", "gpus", "cuda"], "ai": ["ai", "artificial intelligence", "genai", "generative ai"],
+    "machine learning": ["machine learning", "ml"], "inference": ["inference"],
+  },
+  "Delivery & Collaboration": {
+    "agile": ["agile", "scrum", "kanban"], "jira": ["jira"], "confluence": ["confluence"],
+    "documentation": ["documentation", "document"], "mentoring": ["mentoring", "mentor", "mentorship"],
+    "cross-functional": ["cross-functional", "cross functional"],
+    "cost optimization": ["cost optimization", "cost optimisation", "finops", "cost management"],
+    "migration": ["migration", "migrations", "migrate"], "microservices": ["microservices", "micro-services"],
+    "api": ["api", "apis", "rest", "restful", "grpc"], "troubleshooting": ["troubleshooting", "troubleshoot", "debugging", "debug"],
+  },
+};
+
+/* words that never form a dynamic skill phrase on their own */
+const STOPWORDS = new Set(("a an and or of to in for with on at by the is are was were be been being have has had "
+ + "do does did will would can could should may might must this that these those you your we our they their it its "
+ + "as from into over under about across after before between during within without more most other some such only "
+ + "own same so than too very just not no nor all any both each few once here there when where why how what which who "
+ + "team teams work working experience experienced years year strong excellent ability skills skill knowledge "
+ + "understanding familiarity proficiency responsibilities requirements qualifications preferred required plus bonus "
+ + "including include includes etc role position job candidate ideal looking join company help drive ensure "
+ + "build building design designing develop developing developed maintain maintaining manage managing management "
+ + "support supporting collaborate collaborating communication verbal written related field degree bachelor master "
+ + "computer science equivalent benefits salary pay range compensation insurance dental vision remote hybrid onsite "
+ + "environment environments solutions services systems system tools tooling technologies technology platform "
+ + "platforms best practices practice new like well good great e.g eg i.e ie us must-have nice-to-have "
+ + "day day-to-day every deep code cost scale internals stack workflows rotations pipelines expertise defining "
+ + "inc llc ltd corp gmbh co ")
+ .trim().split(/\s+/));
+
+const US_STATES = new Set(["alabama","alaska","arizona","arkansas","california","colorado","connecticut","delaware",
+ "florida","georgia","hawaii","idaho","illinois","indiana","iowa","kansas","kentucky","louisiana","maine","maryland",
+ "massachusetts","michigan","minnesota","mississippi","missouri","montana","nebraska","nevada","new hampshire",
+ "new jersey","new mexico","new york","north carolina","north dakota","ohio","oklahoma","oregon","pennsylvania",
+ "rhode island","south carolina","south dakota","tennessee","texas","utah","vermont","virginia","washington",
+ "west virginia","wisconsin","wyoming","district of columbia"]);
+
+const PROPER_NOUN_WEIGHT = 0.5;
+
+/* -------- alias index: alias -> canonical, longest aliases first ------ */
+const ALIAS_INDEX = [];
+for (const cat of Object.values(KEYWORD_DB))
+  for (const [canon, aliases] of Object.entries(cat))
+    for (const a of aliases) ALIAS_INDEX.push([a, canon]);
+ALIAS_INDEX.sort((x, y) => y[0].length - x[0].length);
+const CURATED_TOKENS = new Set(ALIAS_INDEX.map(([a]) => a));
+
+function escapeRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+function boundaryRe(alias) {
+  // word-boundary-ish match that tolerates c++, ci/cd, node.js, tcp/ip
+  return new RegExp("(^|[^a-z0-9+])" + escapeRe(alias).replace(/ /g, "[\\s-]") + "($|[^a-z0-9+])", "i");
+}
+const ALIAS_RE = new Map(ALIAS_INDEX.map(([a, c]) => [a, boundaryRe(a)]));
+
+function findCurated(text) {
+  const found = new Set();
+  const lower = "\n" + text.toLowerCase() + "\n";
+  for (const [alias, canon] of ALIAS_INDEX)
+    if (!found.has(canon) && ALIAS_RE.get(alias).test(lower)) found.add(canon);
+  return found;
+}
+
+/* --------------- strip JD boilerplate before phrase mining ------------ */
+const TAIL_HEADINGS = /^(benefits|perks|compensation|salary|pay|what we offer|why join|about (us|the company)|equal (employment )?opportunity|eeo|our (hiring )?process|diversity|how to apply|legal|privacy|notice at collection)\b/i;
+const BENEFITS_LINE = /\b(401k|401\(k\)|dental|vision insurance|paid time off|pto|parental leave|maternity|paternity|baby bonding|tuition|wellness stipend|equity package|stock options|sign-on bonus|holidays|life insurance)\b.*$/i;
+
+function prepJD(jd) {
+  const lines = jd.split(/\r?\n/);
+  const out = [];
+  let cut = false;
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (TAIL_HEADINGS.test(line)) { cut = true; continue; }
+    if (cut && /^[A-Z][A-Za-z ]{2,40}:?$/.test(line)) cut = false; // new real section resumes
+    if (cut) continue;
+    out.push(raw.replace(BENEFITS_LINE, ""));
+  }
+  return out.join("\n");
+}
+
+/* ------- dynamic phrase extraction (three sources, weighted) ---------- */
+function phraseOk(p) {
+  if (p.length < 2 || p.length > 40) return false;
+  if (/^\d[\d,.$%kK+]*$/.test(p)) return false;                 // pure numbers / comp
+  if (US_STATES.has(p)) return false;                            // state gazetteer
+  const parts = p.split(/[\s/.-]+/).filter(Boolean);
+  if (parts.length && parts.every(w => STOPWORDS.has(w))) return false; // all-stopword compound
+  if (parts.length === 1 && STOPWORDS.has(p)) return false;
+  if (p.includes("/") && p.split("/").some(w => STOPWORDS.has(w.trim()))) return false; // requests/day
+  return true;
+}
+function isDoubleCount(p) {
+  const parts = p.split(/[\s/]+/).filter(Boolean);
+  return parts.length > 0 && parts.every(w => CURATED_TOKENS.has(w));
+}
+
+function extractDynamicPhrases(jdRaw) {
+  const jd = prepJD(jdRaw);
+  const weights = new Map();
+  const add = (p, w) => {
+    p = p.toLowerCase().trim().replace(/^[-–•*·\s]+|[.,;:]+$/g, "");
+    if (!phraseOk(p)) return;
+    if (CURATED_TOKENS.has(p) || isDoubleCount(p)) return;       // curated already covers it
+    weights.set(p, Math.max(weights.get(p) || 0, w));
+  };
+
+  for (const raw of jd.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line) continue;
+    // source 1: skill-list lines (>=3 delimiter-separated short items).
+    // Colons and parens are also delimiters so "CI/CD pipelines: GitHub Actions"
+    // and "load balancing (NGINX)" yield clean per-tool tokens.
+    const items = line.replace(/^[-–•*·]\s*/, "").split(/[,;:()]/).map(s => s.trim()).filter(Boolean);
+    if (items.length >= 3 && items.every(i => i.split(/\s+/).length <= 4)) {
+      // strip leading stopword qualifiers: "strong python" -> "python"
+      for (const it of items) {
+        const ws = it.toLowerCase().split(/\s+/);
+        while (ws.length > 1 && STOPWORDS.has(ws[0])) ws.shift();
+        add(ws.join(" "), 1.0);
+      }
+    }
+    // source 2: punctuated tech tokens (node.js, ci/cd, c#, k8s-style)
+    for (const m of line.matchAll(/\b[a-zA-Z][a-zA-Z0-9]*[./#+][a-zA-Z0-9./#+]+\b/g)) add(m[0], 1.0);
+    // source 3: Title-Cased proper nouns (down-weighted; skip sentence starts,
+    // bullet-adjacent first words, and gerund bullet openers)
+    const words = line.split(/\s+/);
+    for (let i = 1; i < words.length; i++) {
+      if (/^[-–•*·]+$/.test(words[i - 1])) continue;  // "- Deep expertise…" opener
+      const w = words[i].replace(/[.,;:()]+$/g, "");
+      if (/^[A-Z][a-z]{2,}$/.test(w) && !/ing$/.test(w)) {
+        let phrase = w, j = i + 1;
+        while (j < words.length && /^[A-Z][a-z]{2,}$/.test(words[j].replace(/[.,;:()]+$/g, ""))) {
+          phrase += " " + words[j].replace(/[.,;:()]+$/g, ""); j++;
+        }
+        add(phrase, PROPER_NOUN_WEIGHT);
+        i = j;
+      }
+    }
+  }
+  // drop substrings of longer captured phrases
+  const keys = [...weights.keys()].sort((a, b) => b.length - a.length);
+  const kept = [];
+  for (const k of keys) if (!kept.some(K => K.includes(k))) kept.push(k);
+  return kept.slice(0, 40).map(k => [k, weights.get(k)]);
+}
+
+/* --------------------------- sub-scores ------------------------------- */
+function keywordScore(jd, resume) {
+  const jdCurated = findCurated(jd);
+  const rzCurated = findCurated(resume);
+  const haveCur = [...jdCurated].filter(k => rzCurated.has(k));
+  const missCur = [...jdCurated].filter(k => !rzCurated.has(k));
+  const curatedCov = jdCurated.size ? haveCur.length / jdCurated.size : 1;
+
+  const dyn = extractDynamicPhrases(jd);
+  const rzLower = "\n" + resume.toLowerCase() + "\n";
+  let dynHaveW = 0, dynTotW = 0;
+  const haveDyn = [], missDyn = [];
+  const partsMatch = p => {   // "tcp/ip networking" counts if all real parts appear
+    const parts = p.split(/[\s()]+/).filter(w => w && !STOPWORDS.has(w));
+    return parts.length > 0 && parts.every(w => boundaryRe(w).test(rzLower));
+  };
+  for (const [p, w] of dyn) {
+    dynTotW += w;
+    if (boundaryRe(p).test(rzLower) || partsMatch(p)) { dynHaveW += w; haveDyn.push([p, w]); }
+    else missDyn.push([p, w]);
+  }
+  const dynCov = dynTotW ? dynHaveW / dynTotW : 1;
+
+  const hm = (curatedCov + dynCov) ? (2 * curatedCov * dynCov) / (curatedCov + dynCov) : 0;
+  return { score: hm, curatedCov, dynCov,
+           have: [...haveCur.map(k => [k, 1]), ...haveDyn],
+           miss: [...missCur.map(k => [k, 1]), ...missDyn] };
+}
+
+function structureScore(resume) {
+  const lower = resume.toLowerCase();
+  const checks = [
+    ["Contact email present", /[\w.+-]+@[\w-]+\.[a-z]{2,}/i.test(resume)],
+    ["Phone number present", /(\+?\d[\d\s().-]{8,}\d)/.test(resume)],
+    ["Summary / profile section", /\b(summary|profile|objective|about)\b/.test(lower)],
+    ["Skills / competencies section", /\b(skills|competencies|technologies|technical)\b/.test(lower)],
+    ["Experience section", /\b(experience|employment|work history)\b/.test(lower)],
+    ["Education section", /\b(education|degree|university|college|b\.?s\.?|m\.?s\.?)\b/.test(lower)],
+    ["Bullet points used (≥6)", (resume.match(/^\s*[-–•*·]/gm) || []).length >= 6],
+    ["Quantified achievements (numbers/%)", (resume.match(/\d+%|\$\d|\d+x|\b\d{2,}\b/g) || []).length >= 5],
+    ["Reasonable length (150–1400 words)", (w => w >= 150 && w <= 1400)(resume.split(/\s+/).length)],
+  ];
+  return { score: checks.filter(c => c[1]).length / checks.length, checks };
+}
+
+function yearsScore(jd, resume) {
+  const req = [...jd.matchAll(/(\d{1,2})\s*\+?\s*(?:years?|yrs?)/gi)].map(m => +m[1]);
+  const required = req.length ? Math.max(...req.filter(n => n <= 25), 0) : 0;
+
+  const claimed = [...resume.matchAll(/(\d{1,2})\s*\+?\s*(?:years?|yrs?)/gi)].map(m => +m[1]).filter(n => n <= 40);
+  // also estimate from date ranges like 2018 – 2024 / 2021 – Present
+  let est = 0;
+  const now = new Date().getFullYear();
+  for (const m of resume.matchAll(/\b(20\d\d|19\d\d)\s*[–-]\s*(present|current|20\d\d|19\d\d)/gi)) {
+    const a = +m[1], b = /present|current/i.test(m[2]) ? now : +m[2];
+    if (b >= a && b - a <= 45) est += (b - a);
+  }
+  const have = Math.max(claimed.length ? Math.max(...claimed) : 0, Math.min(est, 40));
+  const score = !required ? 1 : Math.min(have / required, 1);
+  return { score, required, have };
+}
+
+function analyze(jd, resume) {
+  const kw = keywordScore(jd, resume);
+  const st = structureScore(resume);
+  const yr = yearsScore(jd, resume);
+  const total = kw.score * 0.70 + st.score * 0.15 + yr.score * 0.15;
+  return { total, kw, st, yr };
+}
+
+/* =========================== UI wiring ================================ */
+const $ = id => document.getElementById(id);
+let lastResult = null;
+
+$("themeBtn").onclick = () => {
+  const r = document.documentElement;
+  const dark = (r.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")) === "dark";
+  r.dataset.theme = dark ? "light" : "dark";
+};
+
+function hookFile(inputId, taId) {
+  $(inputId).addEventListener("change", e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const rd = new FileReader();
+    rd.onload = () => { $(taId).value = rd.result; };
+    rd.readAsText(f);
+  });
+}
+hookFile("jdFile", "jd"); hookFile("rzFile", "rz");
+
+const SAMPLE_JD = `Senior Site Reliability Engineer — CloudScale Inc (Remote, US)
+
+About the role
+We run a multi-region SaaS platform serving 40M requests/day. You will own
+reliability, observability and infrastructure automation across AWS.
+
+Requirements
+- 5+ years of SRE / DevOps experience in production environments
+- Deep expertise with Kubernetes (EKS), Docker, Helm
+- Infrastructure as Code with Terraform and Ansible
+- CI/CD pipelines: GitHub Actions, ArgoCD, GitOps workflows
+- Observability stack: Prometheus, Grafana, Datadog, OpenTelemetry
+- Strong Python and Bash scripting; Go is a plus
+- Incident response, on-call rotations, blameless postmortems
+- Linux internals, TCP/IP networking, DNS, load balancing (NGINX)
+- Experience defining SLOs, SLIs and error budgets
+- Security: IAM, secrets management with Vault, SOC 2 compliance
+
+Nice to have
+- Kafka, PostgreSQL, Redis at scale
+- Cost optimization / FinOps experience
+- Chaos engineering, capacity planning`;
+
+const SAMPLE_RZ = `ALEX DOE
+Senior Site Reliability Engineer
+alex.doe@email.com · +1 (555) 010-2030 · github.com/alexdoe
+
+SUMMARY
+Site Reliability Engineer with 7 years building and operating AWS production
+platforms. Cut MTTR 45% and infrastructure spend 30% through automation,
+observability and SLO-driven operations.
+
+CORE SKILLS
+Kubernetes (EKS), Docker, Helm, Terraform, Ansible, GitHub Actions, ArgoCD,
+Prometheus, Grafana, Datadog, Python, Bash, Go, Linux, NGINX, Vault, Kafka,
+PostgreSQL, Redis
+
+EXPERIENCE
+CloudCo — Senior SRE                                   2021 – Present
+- Led migration of 120 microservices to EKS with Terraform + Helm, zero downtime
+- Built GitOps CI/CD with GitHub Actions and ArgoCD; deploys up 6x to 40/day
+- Defined SLOs/SLIs and error budgets for 15 services; MTTR down 45%
+- Instrumented OpenTelemetry tracing; Datadog + Prometheus/Grafana dashboards
+- Ran on-call and incident response; authored 30+ blameless postmortems
+- Cut AWS spend 30% ($480k/yr) via rightsizing, Karpenter autoscaling, FinOps reviews
+
+WebScale Ltd — DevOps Engineer                          2018 – 2021
+- Automated infrastructure with Ansible and Terraform across 3 AWS regions
+- Hardened IAM and secrets management with Vault; passed SOC 2 audit
+- Tuned NGINX load balancing and DNS failover for 99.99% availability
+
+EDUCATION
+B.S. Computer Science, State University, 2017`;
+
+$("jdSample").onclick = () => { $("jd").value = SAMPLE_JD; };
+$("rzSample").onclick = () => { $("rz").value = SAMPLE_RZ; };
+
+function chipHTML([p, w], cls) {
+  const wTag = w < 1 ? ` <span class="w">(${w})</span>` : "";
+  return `<span class="chip ${cls}">${cls === "have" ? "✓" : "✗"} ${p}${wTag}</span>`;
+}
+
+$("run").onclick = () => {
+  const jd = $("jd").value.trim(), rz = $("rz").value.trim();
+  if (!jd || !rz) { alert("Paste both a job description and a resume (or load the samples)."); return; }
+  const r = analyze(jd, rz);
+  lastResult = r;
+
+  $("results").style.display = "block";
+  const pct = x => Math.round(x * 100);
+  $("scoreNum").textContent = pct(r.total) + "%";
+  const pass = r.total >= 0.80;
+  $("scoreVerdict").textContent = pass ? "PASS — strong match" : "NEEDS WORK — below 80% ATS bar";
+  $("scoreVerdict").className = "verdict " + (pass ? "pass" : "fail");
+
+  const setBar = (bar, val, x) => { $(bar).style.width = pct(x) + "%"; $(val).textContent = pct(x) + "%"; };
+  setBar("barKw", "valKw", r.kw.score);
+  setBar("barSt", "valSt", r.st.score);
+  setBar("barYr", "valYr", r.yr.score);
+
+  const sortW = (a, b) => b[1] - a[1] || a[0].localeCompare(b[0]);
+  $("haveChips").innerHTML = r.kw.have.sort(sortW).map(x => chipHTML(x, "have")).join("");
+  $("missChips").innerHTML = r.kw.miss.sort(sortW).map(x => chipHTML(x, "miss")).join("");
+  $("haveCount").textContent = `${r.kw.have.length} matched · curated coverage ${pct(r.kw.curatedCov)}% · JD-phrase coverage ${pct(r.kw.dynCov)}%`;
+  $("missCount").textContent = r.kw.miss.length
+    ? `${r.kw.miss.length} missing — weave the genuine ones into your bullets (never fabricate)`
+    : "Nothing missing — excellent.";
+
+  $("structList").innerHTML = r.st.checks.map(([label, ok]) =>
+    `<li class="${ok ? "ok" : "bad"}">${label}</li>`).join("");
+  $("yearsList").innerHTML = [
+    `<li class="${r.yr.required ? "ok" : "ok"}">JD asks for: ${r.yr.required ? r.yr.required + "+ years" : "no explicit requirement"}</li>`,
+    `<li class="${r.yr.have >= r.yr.required ? "ok" : "bad"}">Resume shows: ~${r.yr.have} years (stated or from date ranges)</li>`,
+  ].join("");
+
+  $("results").scrollIntoView({ behavior: "smooth", block: "start" });
+};
+
+/* ========================= AI coach (BYOK) ============================ */
+/* Direct browser -> api.anthropic.com call. Anthropic supports CORS from
+   browsers when the request opts in via the
+   `anthropic-dangerous-direct-browser-access` header. The key stays in
+   this page; "remember" persists it to localStorage on this browser only. */
+
+const FEATURES = {
+  summary: {
+    label: "resume summary rewrite",
+    prompt: (jd, rz, miss) =>
+`You are an expert resume writer. Below is a job description and a candidate resume.
+Rewrite ONLY the resume's professional summary (3-4 sentences) so it is tailored to this job.
+Hard rules: never invent tools, employers, metrics or experience not present in the resume;
+reuse the JD's exact vocabulary where the resume genuinely supports it.
+Then list, as short bullets, which JD keywords you were able to work in.
+
+JOB DESCRIPTION:
+${jd}
+
+RESUME:
+${rz}
+
+KEYWORDS THE DETERMINISTIC ATS SCAN FOUND MISSING: ${miss || "(none)"}`,
+  },
+  gaps: {
+    label: "gap-closing plan",
+    prompt: (jd, rz, miss) =>
+`You are a career coach for engineers. Compare the job description and resume below.
+Produce a prioritized 30-day gap-closing plan: for each of the top 5 real skill gaps,
+give (a) why the JD cares, (b) the fastest credible way to close or evidence it
+(free-tier lab, cert module, open-source contribution), (c) one resume bullet the
+candidate could honestly write after doing it. Be concrete and terse.
+
+JOB DESCRIPTION:
+${jd}
+
+RESUME:
+${rz}
+
+MISSING KEYWORDS FROM ATS SCAN: ${miss || "(none)"}`,
+  },
+  cover: {
+    label: "cover-letter opener",
+    prompt: (jd, rz) =>
+`Write the opening paragraph (4-5 sentences, confident but not gushing) of a cover
+letter for the job below, grounded ONLY in real facts from the resume. Lead with the
+candidate's single most relevant quantified achievement. No clichés ("I am writing to
+apply"), no fabrication. Then give one alternative opener with a different angle.
+
+JOB DESCRIPTION:
+${jd}
+
+RESUME:
+${rz}`,
+  },
+};
+let activeFeature = "summary";
+document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
+  document.querySelectorAll(".tab").forEach(x => x.setAttribute("aria-selected", "false"));
+  t.setAttribute("aria-selected", "true");
+  activeFeature = t.dataset.f;
+  $("aiOut").textContent = "";
+  $("aiErr").textContent = "";
+});
+
+// key persistence (opt-in)
+const savedKey = localStorage.getItem("kanzmatch_key");
+if (savedKey) { $("apiKey").value = savedKey; $("rememberKey").checked = true; }
+$("rememberKey").onchange = e => {
+  if (e.target.checked) localStorage.setItem("kanzmatch_key", $("apiKey").value);
+  else localStorage.removeItem("kanzmatch_key");
+};
+$("apiKey").addEventListener("input", () => {
+  if ($("rememberKey").checked) localStorage.setItem("kanzmatch_key", $("apiKey").value);
+});
+
+let aborter = null;
+$("aiStop").onclick = () => { if (aborter) aborter.abort(); };
+
+$("aiRun").onclick = async () => {
+  const key = $("apiKey").value.trim();
+  const jd = $("jd").value.trim(), rz = $("rz").value.trim();
+  $("aiErr").textContent = ""; $("aiCost").textContent = "";
+  if (!key) { $("aiErr").textContent = "Enter your Anthropic API key (console.anthropic.com → API keys)."; return; }
+  if (!jd || !rz) { $("aiErr").textContent = "Paste a JD and resume first, then Analyze."; return; }
+
+  const missing = lastResult ? lastResult.kw.miss.map(([p]) => p).slice(0, 25).join(", ") : "";
+  const feat = FEATURES[activeFeature];
+  const model = $("model").value;
+  const out = $("aiOut");
+  out.textContent = "";
+  $("aiRun").disabled = true; $("aiStop").style.display = "";
+  aborter = new AbortController();
+  const t0 = performance.now();
+
+  try {
+    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      signal: aborter.signal,
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": key,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true",
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 2048,          // short coaching outputs by design (cost control)
+        stream: true,
+        messages: [{ role: "user", content: feat.prompt(jd, rz, missing) }],
+      }),
+    });
+    if (!resp.ok) {
+      const body = await resp.json().catch(() => ({}));
+      throw new Error(body?.error?.message || `HTTP ${resp.status}`);
+    }
+    // parse the SSE stream: emit content_block_delta text as it arrives
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    let buf = "", usage = null, stopReason = null;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split("\n");
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith("data:")) continue;
+        let ev;
+        try { ev = JSON.parse(line.slice(5)); } catch { continue; }
+        if (ev.type === "content_block_delta" && ev.delta?.type === "text_delta")
+          out.textContent += ev.delta.text;
+        if (ev.type === "message_delta") {
+          usage = ev.usage || usage;
+          stopReason = ev.delta?.stop_reason || stopReason;
+        }
+      }
+    }
+    if (stopReason === "refusal") $("aiErr").textContent = "The model declined this request.";
+    const secs = ((performance.now() - t0) / 1000).toFixed(1);
+    if (usage) {
+      const priceOut = model.includes("haiku") ? 5 : 25;   // $/MTok output
+      const cents = (usage.output_tokens * priceOut / 1e6 * 100).toFixed(3);
+      $("aiCost").textContent =
+        `${feat.label} · ${model} · ${usage.output_tokens} output tokens · ~${cents}¢ output cost · ${secs}s`;
+    }
+  } catch (e) {
+    if (e.name !== "AbortError")
+      $("aiErr").textContent = "Error: " + e.message +
+        (String(e.message).includes("Failed to fetch") ? " (check the key, or ad-blockers blocking api.anthropic.com)" : "");
+  } finally {
+    $("aiRun").disabled = false; $("aiStop").style.display = "none";
+    aborter = null;
+  }
+};
+</script>
+</body>
+</html>
