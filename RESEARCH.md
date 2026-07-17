@@ -229,11 +229,16 @@ Both panes accept `.pdf`. Design decisions:
   encodings with `ToUnicode` CMaps that a minimal parser garbles, and demo-day
   reliability beats purity. The 3.x line is used because it exposes a classic
   `<script>` global (`pdfjsLib`); 4.x is ESM-only and would force a build step.
-- **Lazy CDN load**: the script tag is injected the first time a `.pdf` is
-  selected (cdnjs, `loadPdfJs()` memoized promise). Default flow stays
-  zero-external-request; failure (offline/ad-blocker) surfaces a clear message
-  with a "paste the text instead" fallback tip. Parsing itself is 100%
-  client-side — the PDF bytes never leave the browser.
+- **Vendored, offline-first** (added same day): `app/vendor/pdf.min.js` +
+  `pdf.worker.min.js` are committed to the repo, so PDF parsing needs no
+  network at all. Supply-chain provenance: the vendored files' SHA-256 hashes
+  were verified **identical** to the official `pdfjs-dist@3.11.174` npm
+  package's `build/` files
+  (`pdf.min.js` = `5b5799e6…1566946`, `pdf.worker.min.js` = `feabdf30…bb8527b`).
+  `loadPdfJs()` is still lazy (script injected on first `.pdf` selection,
+  memoized promise) and falls back to the cdnjs CDN only if the vendored copy
+  is missing — e.g. someone deployed `index.html` alone. Parsing is 100%
+  client-side either way — the PDF bytes never leave the browser.
 - **Line reconstruction**: pdf.js returns positioned glyph runs, not lines.
   Lines are rebuilt by emitting `\n` when the baseline (`transform[5]`) moves
   by >2pt or the item carries `hasEOL` — this preserves bullets and section
@@ -245,6 +250,11 @@ Both panes accept `.pdf`. Design decisions:
   `cupsfilter`, parsed with the same code in Node, scores **88.1%** — byte-path
   parity with the plain-text run, zero structure-check regressions. Scanned
   (image-only) PDFs yield no text and produce an explicit error, not a silent 0%.
+  The **vendored bytes themselves** were additionally exercised: requiring
+  `app/vendor/pdf.min.js` in Node (worker pointed at the vendored
+  `pdf.worker.min.js`) extracts the full 190 words with all sentinel tokens
+  intact, and a local `http.server` serve returns both files at the exact
+  relative URLs the loader requests (HTTP 200; 320,004 and 1,087,212 bytes).
 
 ## 5. UI / dataviz decisions
 
@@ -286,7 +296,8 @@ moves is the user's own opt-in API spend, displayed per-run in the UI.
   extraction~~ — **shipped** (§4.1); next step is OCR fallback for scanned PDFs;
   (c) Arabic-language JD support (Kanz's home market) — the dynamic extractor is
   Latin-script-biased today; (d) Web Worker offload for very large corpora;
-  (e) vendor `pdf.min.js` alongside `index.html` for fully-offline PDF parsing.
+  (e) ~~vendor `pdf.min.js` for fully-offline PDF parsing~~ — **shipped**
+  (§4.1, `app/vendor/`, hash-verified against the official npm package).
 
 ## 8. Tooling disclosure
 

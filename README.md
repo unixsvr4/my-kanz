@@ -9,7 +9,11 @@ with three switchable features.
 
 ```
 my-kanz/
-├── app/index.html    ← the entire product (HTML + CSS + JS, ~900 lines, no dependencies)
+├── app/
+│   ├── index.html            ← the entire product (HTML + CSS + JS, ~1000 lines)
+│   └── vendor/               ← pdf.js 3.11.174 (Mozilla, Apache-2.0), vendored for
+│       ├── pdf.min.js           fully-offline PDF parsing; hashes verified against
+│       └── pdf.worker.min.js    the official pdfjs-dist npm package
 ├── README.md         ← this file
 ├── RESEARCH.md       ← methodology, algorithm derivation, validation, cost analysis
 ├── SUBMISSION.md     ← hackathon submission package (all required fields, word-counted)
@@ -26,17 +30,18 @@ open app/index.html            # macOS — double-click works too
 python3 -m http.server -d app 8000   # → http://localhost:8000
 ```
 
-Deploy for $0: push `app/index.html` to GitHub Pages, Cloudflare Pages, Netlify, or
-an S3 bucket. It is one static file with zero external requests in its default mode
-(the only on-demand fetches are pdf.js when a .pdf is uploaded, and api.anthropic.com
-when the user runs the BYOK AI coach).
+Deploy for $0: push the `app/` folder to GitHub Pages, Cloudflare Pages, Netlify, or
+an S3 bucket. **Everything except the opt-in AI coach works fully offline** —
+scoring is pure client-side JS and PDF parsing uses the vendored pdf.js (with a
+CDN fallback if `vendor/` wasn't deployed). The only network call the app can ever
+make besides that fallback is api.anthropic.com when the user runs the BYOK coach.
 
 ## What it does
 
 1. **Paste a job description + your resume** (or press the two *Load sample*
    buttons). Both panes also accept **.txt/.md/.pdf uploads** — PDFs are parsed
-   client-side with pdf.js (lazy-loaded from a CDN only at that moment; the
-   extracted text never leaves the browser).
+   client-side with the vendored pdf.js (lazy-loaded from `vendor/` only at that
+   moment, fully offline; the PDF bytes never leave the browser).
 2. **Analyze match** → instant deterministic ATS-style score:
    - **Keywords 70%** — harmonic mean of (a) coverage of a curated 130-term
      SRE/DevOps/cloud skill dictionary with aliases (`k8s`→kubernetes,

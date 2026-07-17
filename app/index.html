@@ -599,24 +599,39 @@ $("themeBtn").onclick = () => {
 };
 
 /* ---- file loading: .txt/.md read directly; .pdf via pdf.js -----------
-   pdf.js (Mozilla, Apache-2.0) is lazy-loaded from the cdnjs CDN ONLY at
-   the moment a .pdf is selected — the default app flow still makes zero
-   external requests. The extracted text gets the same ligature repair
-   (NFKC: ﬁ→fi, ﬂ→fl …) the parent Python engine applies before scoring. */
+   pdf.js (Mozilla, Apache-2.0, v3.11.174) is VENDORED in ./vendor/ so PDF
+   parsing works fully offline; hashes verified against the official
+   pdfjs-dist npm package (see RESEARCH.md §4.1). It is lazy-loaded only at
+   the moment a .pdf is selected, and if the vendored copy is missing
+   (e.g. someone deployed index.html alone) the cdnjs CDN is the fallback.
+   Extracted text gets the same ligature repair (NFKC: ﬁ→fi, ﬂ→fl …) the
+   parent Python engine applies before scoring. */
 const PDFJS_VER = "3.11.174";
-const PDFJS_BASE = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VER}`;
+const PDFJS_SOURCES = [
+  "vendor",                                                       // offline-first
+  `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VER}`,   // fallback
+];
 let pdfjsReady = null;
-function loadPdfJs() {
-  if (pdfjsReady) return pdfjsReady;
-  pdfjsReady = new Promise((res, rej) => {
+function loadPdfJsFrom(base) {
+  return new Promise((res, rej) => {
     const s = document.createElement("script");
-    s.src = `${PDFJS_BASE}/pdf.min.js`;
+    s.src = `${base}/pdf.min.js`;
     s.onload = () => {
-      window.pdfjsLib.GlobalWorkerOptions.workerSrc = `${PDFJS_BASE}/pdf.worker.min.js`;
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = `${base}/pdf.worker.min.js`;
       res(window.pdfjsLib);
     };
-    s.onerror = () => { pdfjsReady = null; rej(new Error("could not load pdf.js (offline? ad-blocker?)")); };
+    s.onerror = () => { s.remove(); rej(new Error(`pdf.js not reachable at ${base}`)); };
     document.head.appendChild(s);
+  });
+}
+function loadPdfJs() {
+  if (pdfjsReady) return pdfjsReady;
+  pdfjsReady = PDFJS_SOURCES.reduce(
+    (p, base) => p.catch(() => loadPdfJsFrom(base)),
+    Promise.reject()
+  ).catch(err => {
+    pdfjsReady = null;
+    throw new Error("could not load pdf.js (vendored copy missing and CDN unreachable)");
   });
   return pdfjsReady;
 }
