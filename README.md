@@ -45,11 +45,17 @@ make besides that fallback is api.anthropic.com when the user runs the BYOK coac
    parser (native `DecompressionStream` + OOXML paragraph reconstruction).
    File bytes never leave the browser and are never stored.
 2. **Analyze match** → instant deterministic ATS-style score:
-   - **Keywords 70%** — harmonic mean of (a) coverage of a curated 130-term
+   - **Keywords 70%** — harmonic mean of (a) coverage of a curated 136-term
      SRE/DevOps/cloud skill dictionary with aliases (`k8s`→kubernetes,
      `golang`→go, …) and (b) coverage of phrases mined dynamically from *this*
      JD (skill-list lines, punctuated tech tokens like `node.js`/`ci/cd`,
-     Title-Cased proper nouns down-weighted ×0.5).
+     Title-Cased proper nouns down-weighted ×0.5). Before mining, JD
+     boilerplate is excised by closed-set/structural rules ported from the
+     563-JD-validated Python engine — company-intro blocks, perk lists, HR
+     competency taxonomies, legal/EEO/visa/fraud tails, "At \<Co\>, we…"
+     pitch, posting metadata, and the employer's own name — so benefits and
+     marketing words never tank the score, for technical **and**
+     non-technical JDs alike (see RESEARCH.md §2.2).
    - **Structure 15%** — 9 checks: contact info, sections, bullets, quantified
      achievements, length.
    - **Experience 15%** — years required (JD regex) vs years shown (stated

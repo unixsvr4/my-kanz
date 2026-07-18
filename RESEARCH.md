@@ -75,7 +75,7 @@ C = |curated(J) ∩ curated(R)| / |curated(J)|          (curated coverage)
 D = Σ w(p)·[match(p,R)] / Σ w(p),  p ∈ dyn(J)         (weighted dynamic coverage)
 ```
 
-- **Curated dictionary**: 130 canonical skills across 12 categories (cloud,
+- **Curated dictionary**: 136 canonical skills across 12 categories (cloud,
   containers, CI/CD, IaC, observability, SRE practice, languages, data,
   OS/networking, security, AI/ML-ops, delivery), each with alias lists
   (`k8s → kubernetes`, `golang → go`, `postgres → postgresql`). Matching uses a
@@ -89,11 +89,47 @@ D = Σ w(p)·[match(p,R)] / Σ w(p),  p ∈ dyn(J)         (weighted dynamic cov
   3. *Title-Cased proper nouns*, sentence-start and bullet-adjacent positions
      excluded, gerunds excluded — weight **0.5** (`PROPER_NOUN_WEIGHT`), so
      unknown company/product names cannot dominate the denominator.
-- **Noise rejection layers** (ported from the Python engine's four-layer design):
-  US-state gazetteer (a state name is never a skill), pure numbers/comp figures,
-  all-stopword compounds, slash-compounds containing a stopword part
-  (`requests/day`), phrases whose every part is already curated
-  (double-count guard, e.g. `gcp/aws`), corporate suffixes (`inc`, `llc`).
+- **JD boilerplate excision** (`prepJD`, ported from the Python engine where it
+  was validated on a 563-JD corpus). The dynamic score is `matched/extracted`,
+  so every boilerplate phrase that survives extraction and isn't in the resume
+  silently tanks a genuinely strong match. Every rule is **closed-set or
+  structural** — it matches a boilerplate *family* by shape, never per-company
+  vocabulary, so it holds for technical and non-technical JDs alike:
+  1. labeled company-intro blocks ("The Company:", "About Us", "Our Mission")
+     excised up to the next job-content header — the required boundary means it
+     can never nuke a whole posting;
+  2. trailing legal/eligibility boilerplate truncated at the earliest marker
+     (EEO employer statements, "authorized to work", visa sponsorship, CCPA
+     "Notice at Collection", background checks, recruitment-fraud disclaimers);
+  3. tail sections (benefits/perks/pay/hiring process/shift) skipped from a
+     colon-tolerant header set ("The Perks:" — an EOL-anchored regex silently
+     misses colon-suffixed headers) until a *real* job-content header — resuming
+     on any TitleCase line wrongly reopened the cut on perk items like "Casual
+     Dress";
+  4. anchored-block strippers: a run of list-like lines with ≥2 closed-set
+     benefit anchors (401k/insurance/PTO) is a perk list, and a run of bare
+     phrases with ≥2 soft-skill anchors (Influence, Business Acumen) is an HR
+     competency taxonomy — drop the whole run, so unbounded items (benefit
+     product names, "Solution Delivery Process") die without enumeration;
+  5. "At \<Company\>, we…" pitch lines and posting-metadata lines
+     ("LOCATION: New York/ New Jersey", "REPORTS TO: …") dropped;
+  6. missing-space sentence welds repaired (`best.Here` → `best. Here`) so they
+     can't fake dotted tech tokens;
+  7. the employer's own name — captured with zero configuration from its EEO
+     self-reference, corporate self-intro ("X is a global company…"), or "At X,
+     we…" pitch — is never counted as a skill.
+- **Phrase-level noise rejection**: gazetteers (US states, world cities, calendar
+  words, compass directions, spelled-out numbers — never skills in any
+  profession), HR-taxonomy soft skills ("stakeholder management", "growth
+  mindset" — every candidate claims them, scoring them is meaningless),
+  job-title words (senior/engineer/manager), pure numbers/comp figures,
+  hyphenated descriptive adjectives (`rock-solid`, `people-centered`,
+  `drag-and-drop`), office-address fragments, phrases containing any stopword
+  part (prose fragments — the real skill inside is caught by the curated pass),
+  double-count guards (every part curated e.g. `gcp/aws`; curated term + generic
+  filler e.g. `agile practices`; slash-fragments of curated compounds e.g. bare
+  `ci` from `ci/cd`), and TitleCase phrases are never welded across punctuation
+  ("SRE Discipline: Strong…" can't become "discipline strong").
 - **Resume-side matching** accepts either the whole phrase or **all non-stopword
   parts individually** — so `tcp/ip networking` counts when the resume contains
   `TCP/IP` and `networking` in separate bullets. Rationale: the phrase is JD

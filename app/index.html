@@ -313,7 +313,8 @@ const KEYWORD_DB = {
     "oci": ["oci", "oracle cloud"],
   },
   "Containers & Orchestration": {
-    "kubernetes": ["kubernetes", "k8s"], "docker": ["docker", "containerization", "containers", "container"],
+    "kubernetes": ["kubernetes", "k8s", "container orchestration", "orchestration"],
+    "docker": ["docker", "containerization", "containers", "container"],
     "helm": ["helm"], "istio": ["istio", "service mesh"], "argocd": ["argocd", "argo cd"],
     "karpenter": ["karpenter"], "autoscaling": ["autoscaling", "auto-scaling", "auto scaling", "hpa"],
     "kustomize": ["kustomize"], "containerd": ["containerd"],
@@ -356,12 +357,13 @@ const KEYWORD_DB = {
     "kafka": ["kafka"], "postgresql": ["postgresql", "postgres"], "mysql": ["mysql"],
     "redis": ["redis"], "mongodb": ["mongodb", "mongo"], "rabbitmq": ["rabbitmq"],
     "airflow": ["airflow"], "spark": ["spark"], "cassandra": ["cassandra"],
+    "snowflake": ["snowflake"], "data lake": ["data lake", "data lakes", "lakehouse"],
   },
   "OS & Networking": {
     "linux": ["linux", "unix", "rhel", "ubuntu", "centos"], "networking": ["networking", "network"],
     "dns": ["dns"], "tcp/ip": ["tcp/ip", "tcp"], "http": ["http", "https"],
     "load balancing": ["load balancing", "load balancer", "load balancers", "nginx", "haproxy"],
-    "vpn": ["vpn"], "firewall": ["firewall", "firewalls"], "windows": ["windows server", "windows"],
+    "vpn": ["vpn"], "firewall": ["firewall", "firewalls", "fw"], "windows": ["windows server", "windows"],
   },
   "Security & Compliance": {
     "security": ["security", "devsecops"], "encryption": ["encryption", "tls", "ssl"],
@@ -369,11 +371,14 @@ const KEYWORD_DB = {
     "vault": ["vault", "secrets management", "secrets"], "zero trust": ["zero trust", "zero-trust"],
     "vulnerability": ["vulnerability", "vulnerability management", "cve"],
     "authentication": ["authentication", "oauth", "sso", "saml"], "audit": ["audit", "auditing"],
+    "waf": ["waf", "web application firewall"], "selinux": ["selinux"],
+    "ids/ips": ["ids/ips", "ips/ids", "intrusion detection", "intrusion prevention"],
   },
   "AI/ML Ops": {
     "mlops": ["mlops", "ml ops"], "llm": ["llm", "llms", "large language model"],
     "gpu": ["gpu", "gpus", "cuda"], "ai": ["ai", "artificial intelligence", "genai", "generative ai"],
     "machine learning": ["machine learning", "ml"], "inference": ["inference"],
+    "ai coding assistant": ["github copilot", "copilot", "cursor", "claude code", "codeium"],
   },
   "Delivery & Collaboration": {
     "agile": ["agile", "scrum", "kanban"], "jira": ["jira"], "confluence": ["confluence"],
@@ -399,8 +404,24 @@ const STOPWORDS = new Set(("a an and or of to in for with on at by the is are wa
  + "environment environments solutions services systems system tools tooling technologies technology platform "
  + "platforms best practices practice new like well good great e.g eg i.e ie us must-have nice-to-have "
  + "day day-to-day every deep code cost scale internals stack workflows rotations pipelines expertise defining "
- + "inc llc ltd corp gmbh co ")
+ + "inc llc ltd corp gmbh co "
+ // job-title & generic-aptitude words: a title is not a skill, in any profession
+ + "senior junior principal staff head engineer engineers developer developers manager managers analyst analysts "
+ + "specialist consultant coordinator director recruiter mastery discipline solid ops infrastructure player ")
  .trim().split(/\s+/));
+
+/* line-leading responsibility verbs (imperative or third-person -s/-es):
+   "Lead market research" is the verb "lead" + the skill "market research" —
+   strip the verb, keep the skill. Deliberately excludes verb-named tools
+   (Go, Make, Compose). */
+const RESP_VERBS = new Set(("develop manage lead run own drive partner collaborate design build implement create "
+ + "maintain support deliver define evaluate conduct guide enable oversee coordinate execute establish improve "
+ + "optimize monitor analyze report champion architect automate embrace participate provide ensure").split(" "));
+function respVerb(w) {
+  if (RESP_VERBS.has(w)) return true;
+  for (const suf of ["es", "s"]) if (w.endsWith(suf) && RESP_VERBS.has(w.slice(0, -suf.length))) return true;
+  return false;
+}
 
 const US_STATES = new Set(["alabama","alaska","arizona","arkansas","california","colorado","connecticut","delaware",
  "florida","georgia","hawaii","idaho","illinois","indiana","iowa","kansas","kentucky","louisiana","maine","maryland",
@@ -408,6 +429,49 @@ const US_STATES = new Set(["alabama","alaska","arizona","arkansas","california",
  "new jersey","new mexico","new york","north carolina","north dakota","ohio","oklahoma","oregon","pennsylvania",
  "rhode island","south carolina","south dakota","tennessee","texas","utah","vermont","virginia","washington",
  "west virginia","wisconsin","wyoming","district of columbia"]);
+
+/* closed-set gazetteers — a city / calendar word / compass direction /
+   spelled-out number is never a skill, in ANY profession. ("spring" is
+   deliberately absent: Java Spring.) */
+const CITY_NOISE = new Set(("nyc la sf brooklyn manhattan queens tribeca soho midtown hoboken boston austin chicago "
+ + "seattle denver atlanta dallas houston philadelphia miami portland oakland sunnyvale cupertino redmond bellevue "
+ + "reston columbus charlotte nashville minneapolis detroit pittsburgh baltimore raleigh durham tampa orlando "
+ + "sacramento boulder bethesda london dublin toronto vancouver montreal ottawa berlin amsterdam paris madrid "
+ + "barcelona lisbon zurich warsaw krakow bangalore bengaluru hyderabad pune chennai mumbai gurgaon noida singapore "
+ + "sydney melbourne tokyo dubai").split(" ").concat(["new york city","san francisco","san jose","san diego",
+ "los angeles","palo alto","mountain view","menlo park","santa monica","jersey city","salt lake city","las vegas",
+ "santa clara","el segundo","san mateo","redwood city","white plains","ann arbor","tel aviv","mexico city",
+ "buenos aires","sao paulo","hong kong","kuala lumpur"]));
+const TIME_WORDS = new Set(("monday tuesday wednesday thursday friday saturday sunday january february march april "
+ + "may june july august september october november december summer winter autumn fall weekday weekdays weekend "
+ + "weekends quarterly annually").split(" "));
+const COMPASS = new Set(["north","south","east","west","northeast","northwest","southeast","southwest","midwest"]);
+const NUMBER_WORDS = new Set(("two three four five six seven eight nine ten eleven twelve twenty thirty forty fifty "
+ + "hundred thousand million billion").split(" "));
+
+/* HR-taxonomy soft skills: generic in ANY profession — every candidate claims
+   them, so scoring on them is meaningless. Also the closed-set ANCHORS that
+   mark HR competency-taxonomy blocks (see stripAnchoredRuns). */
+const SOFT_SKILLS = new Set(["communication","communication skills","verbal communication","written communication",
+ "collaboration","teamwork","team player","leadership","influence","adaptability","flexibility","problem solving",
+ "problem-solving","critical thinking","analytical thinking","attention to detail","detail-oriented",
+ "time management","stakeholder management","business acumen","result orientation","results orientation",
+ "creativity","empathy","integrity","accountability","ownership","work ethic","growth mindset","mindset",
+ "first mindset","interpersonal skills","organizational skills","organization","self-starter","self starter",
+ "can-do attitude","positive attitude","multitasking","decision making","decision-making","emotional intelligence",
+ "prioritization","initiative","curiosity","resilience","professionalism","active listening","agile practices",
+ "solution delivery process","risk management","data management","strategic thinking","relationship building"]);
+
+/* hyphen compounds that are grammar, not tools: descriptive adjectives
+   (rock-solid, people-centered, fast-paced, no-fee) and conjunction infixes
+   (drag-and-drop). Real hyphenated tech (ci-cd, scikit-learn) doesn't end in
+   these adjective suffixes. */
+const HYPHEN_ADJ = new RegExp("^(?:non|anti|semi|no)-[a-z0-9]+$|^[a-z]+-(?:based|focused|driven|facing|friendly|"
+ + "aligned|supported|enabled|managed|aware|ready|first|only|free|approved|specific|related|oriented|native|led|"
+ + "owned|backed|market|equity|tier|grade|class|level|scale|speed|time|paced|profile|leading|world|powered|new|"
+ + "performing|centric|centered|solid|agnostic|defined|adjacent)$");
+const CONJ_COMPOUND = /-(?:and|or|n)-/;
+const STREET_RE = /\b(?:blvd|boulevard|avenue|suite|ste|pkwy|hwy|plaza|floor)\b/;
 
 const PROPER_NOUN_WEIGHT = 0.5;
 
@@ -418,6 +482,14 @@ for (const cat of Object.values(KEYWORD_DB))
     for (const a of aliases) ALIAS_INDEX.push([a, canon]);
 ALIAS_INDEX.sort((x, y) => y[0].length - x[0].length);
 const CURATED_TOKENS = new Set(ALIAS_INDEX.map(([a]) => a));
+
+/* slash-fragments of curated compounds ("ci/cd" -> ci, cd; "tcp/ip" -> tcp, ip):
+   the proper-noun miner splits at slashes, so each half surfaces alone even
+   though the compound is fully curated — never NEW information. */
+const CURATED_SLASH_FRAGS = new Set();
+for (const t of CURATED_TOKENS)
+  if (t.includes("/"))
+    for (const f of t.split("/")) if (f.trim().length >= 2) CURATED_SLASH_FRAGS.add(f.trim());
 
 function escapeRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
 function boundaryRe(alias) {
@@ -434,47 +506,174 @@ function findCurated(text) {
   return found;
 }
 
-/* --------------- strip JD boilerplate before phrase mining ------------ */
-const TAIL_HEADINGS = /^(benefits|perks|compensation|salary|pay|what we offer|why join|about (us|the company)|equal (employment )?opportunity|eeo|our (hiring )?process|diversity|how to apply|legal|privacy|notice at collection)\b/i;
-const BENEFITS_LINE = /\b(401k|401\(k\)|dental|vision insurance|paid time off|pto|parental leave|maternity|paternity|baby bonding|tuition|wellness stipend|equity package|stock options|sign-on bonus|holidays|life insurance)\b.*$/i;
+/* --------------- strip JD boilerplate before phrase mining ------------
+   Ported from the my-resumes Python scorer (validated on a 563-JD corpus).
+   Every rule is CLOSED-SET or STRUCTURAL — it matches a boilerplate FAMILY
+   (perk lists, company pitch, legal tails, HR competency taxonomies) by its
+   shape, never per-company vocabulary, so it holds for technical and
+   non-technical JDs alike. */
+const INTRO_HEADINGS = new RegExp("^(?:the |our )?(?:company(?: description| overview| profile)?|"
+ + "about (?:us|the company)|who we are|our (?:story|mission|values|culture))\\s*:?\\s*$", "i");
+const JOB_CONTENT = new RegExp("^(?:the role|role overview|about the (?:role|job|position)|"
+ + "position (?:overview|summary)|job description|description|overview|(?:key )?responsibilities|duties|"
+ + "requirements|(?:minimum|basic|preferred) qualifications|qualifications|what you.?ll (?:do|bring|own)|"
+ + "what we.?re looking for|who you are|skills?(?: (?:and|&) experience)?)\\s*:?\\s*$", "i");
+/* [ \t]*:?\s*$ anchoring matters: "The Perks:" / "Benefits:" carry a trailing
+   colon — a bare EOL anchor silently misses every such header. */
+const TAIL_HEADINGS = new RegExp("^(?:the |our )?(?:benefits?(?: (?:and|&) perks?)?|"
+ + "perks?(?: (?:and|&) (?:benefits?|culture))?|"
+ + "compensation(?: (?:and|&) benefits?| philosophy| information| range| package)?|salary(?: range| information)?|"
+ + "pay(?: range| transparency)?|total rewards?|how we pay|what we offer|what you.?ll (?:love|get|enjoy|receive)|"
+ + "why join\\b.*|about (?:us|the company)|equal (?:employment )?opportunity(?: employer)?|eeo|"
+ + "diversity(?: (?:and|&) inclusion)?|(?:hiring|interview|application) process|how to apply|legal|privacy|"
+ + "additional information|notice at collection|(?:recruitment )?fraud (?:disclaimer|alert|notice|warning)|"
+ + "shift|hours per week)\\s*:?\\s*$", "i");
+/* legal/eligibility paragraph OPENERS: work-auth is conventionally the last
+   requirement, so truncating from the earliest marker removes the visa/EEO/
+   CCPA/fraud tail that follows. */
+const LEGAL_MARKERS = new RegExp("(equal (employment )?opportunity employer|proud to be an equal|"
+ + "authorized to work|(does not|will not|unable to) (currently )?(sponsor|provide sponsorship|offer visa)|"
+ + "visa sponsorship|notice at collection|candidates residing in|background checks? (for|will)|e-?verify|"
+ + "drug-?free workplace|your base (pay|salary) is one part|reasonable accommodations?|aware of fraudsters|"
+ + "recruitment fraud)", "i");
+const AT_COMPANY_PITCH = /^At\s+[A-Z][\w&.'-]*(?:\s+[A-Z][\w&.'-]*){0,2},?\s+(?:we|our|you)\b/;
+/* posting-metadata lines ("LOCATION: New York/ New Jersey", "REPORTS TO: Head
+   of Infrastructure") — logistics, never skills, and they mimic skill-list
+   lines well enough to fool source 1. */
+const METADATA_LINE = new RegExp("^(?:job title|location|reports? to|department|employment type|job type|"
+ + "schedule|travel|work location|seniority level|team|duration|contract length|start date|job id|"
+ + "requisition|posted|date posted)\\s*[:\\-]", "i");
+const BENEFITS_LINE = new RegExp("\\b(401\\s?\\(?k\\)?|dental|vision insurance|health insurance|life insurance|"
+ + "pet insurance|disability insurance|(unlimited|flexible|generous) (pto|paid time off|vacation)|paid time off|"
+ + "pto|sick (time|leave)|parental leave|maternity|paternity|baby bonding|tuition|"
+ + "wellness (stipend|allowance|program)|gym membership|commuter benefits?|hsa|fsa|espp|stock options?|"
+ + "equity package|sign-on bonus|(cell )?phone stipend|casual dress|paid holidays?|sabbatical|"
+ + "\\$\\s?\\d{2,3}[,\\d]*\\s*(-|–|to)\\s*\\$?\\s?\\d{2,3}[,\\d]*)\\b.*$", "i");
+
+/* Anchored-block stripper: a run of consecutive non-blank lines where >=minHits
+   lines match a closed-set anchor and all-but-one qualify as list-like is a
+   perk list / HR competency taxonomy — drop the WHOLE run, so unbounded items
+   (benefit product names, "Solution Delivery Process") die without ever being
+   enumerated. A real skills list never carries two anchor lines. */
+function stripAnchoredRuns(lines, isAnchor, qualifies, minRun, minHits) {
+  const out = [];
+  let i = 0;
+  while (i < lines.length) {
+    if (!lines[i].trim()) { out.push(lines[i]); i++; continue; }
+    let j = i;
+    while (j < lines.length && lines[j].trim()) j++;
+    const run = lines.slice(i, j);
+    const hits = run.filter(isAnchor).length;
+    const quals = run.filter(l => qualifies(l) || isAnchor(l)).length;
+    if (!(run.length >= minRun && hits >= minHits && quals >= run.length - 1)) out.push(...run);
+    i = j;
+  }
+  return out;
+}
 
 function prepJD(jd) {
-  const lines = jd.split(/\r?\n/);
-  const out = [];
+  // missing-space sentence welds ("their best.Here, you…") fake dotted tech
+  // tokens; real dotted tech is lowercase (node.js) or caps (ASP.NET) after
+  // the dot, so Uppercase-then-lowercase can never split a real token.
+  jd = jd.replace(/([a-z])\.(?=[A-Z][a-z])/g, "$1. ");
+  let lines = jd.split(/\r?\n/);
+
+  // 1) labeled company-intro block ("The Company:", "About Us") — excise up to
+  //    the next job-content header; the required boundary means this can never
+  //    nuke a whole posting.
+  for (let i = 0; i < lines.length; i++) {
+    if (INTRO_HEADINGS.test(lines[i].trim())) {
+      const end = lines.findIndex((l, k) => k > i && JOB_CONTENT.test(l.trim()));
+      if (end > i) { lines.splice(i, end - i); i--; }
+    }
+  }
+
+  // 2) trailing legal/EEO/visa/CCPA/fraud boilerplate — truncate at the
+  //    earliest marker.
+  const legalAt = lines.findIndex(l => LEGAL_MARKERS.test(l));
+  if (legalAt >= 0) lines = lines.slice(0, legalAt);
+
+  // 3) tail sections (benefits/perks/pay/process/shift…) — skip until a REAL
+  //    job-content header. (Resuming on any TitleCase line reopened the cut on
+  //    perk items like "Casual Dress".) Also drops "At <Company>, we…" pitch.
+  const kept = [];
   let cut = false;
   for (const raw of lines) {
     const line = raw.trim();
     if (TAIL_HEADINGS.test(line)) { cut = true; continue; }
-    if (cut && /^[A-Z][A-Za-z ]{2,40}:?$/.test(line)) cut = false; // new real section resumes
+    if (cut && JOB_CONTENT.test(line)) cut = false;
     if (cut) continue;
-    out.push(raw.replace(BENEFITS_LINE, ""));
+    if (AT_COMPANY_PITCH.test(line) || METADATA_LINE.test(line)) continue;
+    kept.push(raw);
   }
-  return out.join("\n");
+
+  // 4) anchored blocks: perk lists (a long insurance-enumeration line counts
+  //    as list-like) and HR competency taxonomies (soft-skill anchor lines).
+  let out = stripAnchoredRuns(kept,
+    l => BENEFITS_LINE.test(l),
+    l => l.trim().split(/\s+/).length <= 8, 3, 2);
+  out = stripAnchoredRuns(out,
+    l => SOFT_SKILLS.has(l.trim().toLowerCase()),
+    l => /^[A-Za-z][A-Za-z /&'-]*$/.test(l.trim()) && l.trim().split(/\s+/).length <= 4, 4, 2);
+
+  // 5) inline benefit/comp items anywhere (keyword to end-of-line, preserving
+  //    any real prose before it).
+  return out.map(l => l.replace(BENEFITS_LINE, " ")).join("\n");
+}
+
+/* employer name ≠ skill: capture the brand from its own EEO self-reference,
+   corporate self-introduction ("X is a global company…"), or "At X, we…"
+   pitch — works with zero configuration for any company, any industry. */
+function employerTerms(jd) {
+  const toks = new Set();
+  const grab = m => {
+    for (const t of m[1].toLowerCase().split(/[\s&.,'-]+/))
+      if (t.length >= 2 && !CURATED_TOKENS.has(t)) toks.add(t);
+  };
+  for (const m of jd.matchAll(/\b([A-Z][\w&.'-]*(?:\s+[A-Z][\w&.'-]*){0,3})\s+is\s+(?:[Pp]roud(?:ly)?\s+(?:to\s+be\s+)?)?(?:an?\s+)?[Ee]qual\s+(?:[Ee]mployment\s+)?[Oo]pportunity/g)) grab(m);
+  for (const m of jd.matchAll(/\b([A-Z][\w&.'-]*(?:\s+[A-Z][\w&.'-]*){0,3})\s+is\s+(?:a|an|the)\s+(?:[\w-]+\s+){0,4}?(?:organization|company|companies|firm|business|employer|provider|agency|startup|start-up|subsidiary|division|brand)\b/g)) grab(m);
+  for (const m of jd.matchAll(/\bAt\s+([A-Z][\w&.'-]*(?:\s+[A-Z][\w&.'-]*){0,2}),?\s+(?:we|our|you)\b/g)) grab(m);
+  return toks;
 }
 
 /* ------- dynamic phrase extraction (three sources, weighted) ---------- */
 function phraseOk(p) {
   if (p.length < 2 || p.length > 40) return false;
   if (/^\d[\d,.$%kK+]*$/.test(p)) return false;                 // pure numbers / comp
-  if (US_STATES.has(p)) return false;                            // state gazetteer
-  const parts = p.split(/[\s/.-]+/).filter(Boolean);
-  if (parts.length && parts.every(w => STOPWORDS.has(w))) return false; // all-stopword compound
-  if (parts.length === 1 && STOPWORDS.has(p)) return false;
-  if (p.includes("/") && p.split("/").some(w => STOPWORDS.has(w.trim()))) return false; // requests/day
+  if (US_STATES.has(p) || CITY_NOISE.has(p)) return false;       // places are never skills
+  if (SOFT_SKILLS.has(p)) return false;                          // HR-taxonomy soft skills
+  if (STREET_RE.test(p)) return false;                           // office addresses
+  if (CONJ_COMPOUND.test(p) || HYPHEN_ADJ.test(p)) return false; // grammar, not tools
+  const parts = p.split(/[\s/.-]+/).filter(w => w && w !== "&");
+  if (!parts.length) return false;
+  // a multi-word phrase carrying ANY stopword part is prose, not a skill
+  // ("expert-level experience with kubernetes", "security knowledge") — the
+  // real skill inside it is caught separately by the curated pass
+  if (parts.some(w => STOPWORDS.has(w))) return false;
+  if (parts.length === 1 && (NUMBER_WORDS.has(p) || TIME_WORDS.has(p) || COMPASS.has(p))) return false;
   return true;
 }
 function isDoubleCount(p) {
-  const parts = p.split(/[\s/]+/).filter(Boolean);
-  return parts.length > 0 && parts.every(w => CURATED_TOKENS.has(w));
+  const parts = p.split(/[\s/]+/).filter(w => w && w !== "&" && w !== "and");
+  if (parts.length > 0 && parts.every(w => CURATED_TOKENS.has(w))) return true;
+  // curated term padded with generic soft filler ("agile practices") adds
+  // nothing beyond the curated match it shadows
+  if (parts.length >= 2 && parts.some(w => CURATED_TOKENS.has(w))
+      && parts.every(w => CURATED_TOKENS.has(w) || SOFT_SKILLS.has(w))) return true;
+  // bare slash-fragment of a curated compound ("ci" / "cd" from "ci/cd")
+  if (!p.includes(" ") && CURATED_SLASH_FRAGS.has(p)) return true;
+  return false;
 }
 
 function extractDynamicPhrases(jdRaw) {
   const jd = prepJD(jdRaw);
+  const employer = employerTerms(jdRaw);
   const weights = new Map();
   const add = (p, w) => {
     p = p.toLowerCase().trim().replace(/^[-–•*·\s]+|[.,;:]+$/g, "");
     if (!phraseOk(p)) return;
     if (CURATED_TOKENS.has(p) || isDoubleCount(p)) return;       // curated already covers it
+    if (p.split(/[ /-]+/).some(t => employer.has(t))) return;    // employer name ≠ skill
     weights.set(p, Math.max(weights.get(p) || 0, w));
   };
 
@@ -486,10 +685,11 @@ function extractDynamicPhrases(jdRaw) {
     // and "load balancing (NGINX)" yield clean per-tool tokens.
     const items = line.replace(/^[-–•*·]\s*/, "").split(/[,;:()]/).map(s => s.trim()).filter(Boolean);
     if (items.length >= 3 && items.every(i => i.split(/\s+/).length <= 4)) {
-      // strip leading stopword qualifiers: "strong python" -> "python"
+      // strip leading stopword qualifiers and responsibility verbs:
+      // "strong python" -> "python", "Lead market research" -> "market research"
       for (const it of items) {
         const ws = it.toLowerCase().split(/\s+/);
-        while (ws.length > 1 && STOPWORDS.has(ws[0])) ws.shift();
+        while (ws.length > 1 && (STOPWORDS.has(ws[0]) || respVerb(ws[0]))) ws.shift();
         add(ws.join(" "), 1.0);
       }
     }
@@ -503,7 +703,10 @@ function extractDynamicPhrases(jdRaw) {
       const w = words[i].replace(/[.,;:()]+$/g, "");
       if (/^[A-Z][a-z]{2,}$/.test(w) && !/ing$/.test(w)) {
         let phrase = w, j = i + 1;
-        while (j < words.length && /^[A-Z][a-z]{2,}$/.test(words[j].replace(/[.,;:()]+$/g, ""))) {
+        // never extend across punctuation: "SRE Discipline: Strong experience"
+        // must not weld into the fake phrase "discipline strong"
+        while (j < words.length && !/[.,;:()]$/.test(words[j - 1])
+               && /^[A-Z][a-z]{2,}$/.test(words[j].replace(/[.,;:()]+$/g, ""))) {
           phrase += " " + words[j].replace(/[.,;:()]+$/g, ""); j++;
         }
         add(phrase, PROPER_NOUN_WEIGHT);
