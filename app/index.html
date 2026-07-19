@@ -305,7 +305,8 @@ const KEYWORD_DB = {
     "gcp": ["gcp", "google cloud", "google cloud platform"],
     "ec2": ["ec2"], "s3": ["s3"], "lambda": ["lambda", "aws lambda"],
     "eks": ["eks", "amazon eks", "elastic kubernetes service"],
-    "ecs": ["ecs"], "vpc": ["vpc", "vpcs"], "rds": ["rds", "aurora"],
+    "ecs": ["ecs"], "efs": ["efs", "elastic file system"],
+    "vpc": ["vpc", "vpcs"], "rds": ["rds", "aurora"],
     "iam": ["iam"], "cloudwatch": ["cloudwatch"], "cloudfront": ["cloudfront"],
     "route 53": ["route 53", "route53"], "dynamodb": ["dynamodb"],
     "multi-region": ["multi-region", "multi region"], "serverless": ["serverless"],
@@ -326,7 +327,7 @@ const KEYWORD_DB = {
     "gitops": ["gitops"], "circleci": ["circleci"], "spinnaker": ["spinnaker"],
   },
   "Infrastructure as Code": {
-    "terraform": ["terraform"], "ansible": ["ansible"], "cloudformation": ["cloudformation"],
+    "terraform": ["terraform"], "terragrunt": ["terragrunt"], "ansible": ["ansible"], "cloudformation": ["cloudformation"],
     "iac": ["iac", "infrastructure as code", "infrastructure-as-code"], "pulumi": ["pulumi"],
     "packer": ["packer"], "puppet": ["puppet"], "chef": ["chef"],
   },
@@ -334,7 +335,9 @@ const KEYWORD_DB = {
     "prometheus": ["prometheus"], "grafana": ["grafana"], "datadog": ["datadog"],
     "monitoring": ["monitoring", "monitor"], "logging": ["logging", "log aggregation"],
     "alerting": ["alerting", "alerts"], "observability": ["observability"],
-    "elk": ["elk", "elasticsearch", "kibana", "logstash"], "splunk": ["splunk"],
+    "elk": ["elk", "elasticsearch", "kibana", "logstash", "opensearch"], "splunk": ["splunk"],
+    "sumologic": ["sumologic", "sumo logic"],
+    "dashboards": ["dashboard", "dashboards"],
     "opentelemetry": ["opentelemetry", "otel"], "tracing": ["tracing", "distributed tracing"],
     "new relic": ["new relic", "newrelic"], "nagios": ["nagios"], "slo": ["slo", "slos", "service level objective"],
     "sli": ["sli", "slis"], "sla": ["sla", "slas"],
@@ -358,9 +361,12 @@ const KEYWORD_DB = {
     "redis": ["redis"], "mongodb": ["mongodb", "mongo"], "rabbitmq": ["rabbitmq"],
     "airflow": ["airflow"], "spark": ["spark"], "cassandra": ["cassandra"],
     "snowflake": ["snowflake"], "data lake": ["data lake", "data lakes", "lakehouse"],
+    "redshift": ["redshift", "amazon redshift"], "analytics": ["analytics", "data analytics"],
   },
   "OS & Networking": {
-    "linux": ["linux", "unix", "rhel", "ubuntu", "centos"], "networking": ["networking", "network"],
+    "linux": ["linux", "unix", "rhel", "ubuntu", "centos"],
+    "networking": ["networking", "network", "networks"],
+    "cdn": ["cdn", "cdns", "content delivery network"],
     "dns": ["dns"], "tcp/ip": ["tcp/ip", "tcp"], "http": ["http", "https"],
     "load balancing": ["load balancing", "load balancer", "load balancers", "nginx", "haproxy"],
     "vpn": ["vpn"], "firewall": ["firewall", "firewalls", "fw"], "windows": ["windows server", "windows"],
@@ -382,6 +388,7 @@ const KEYWORD_DB = {
   },
   "Delivery & Collaboration": {
     "agile": ["agile", "scrum", "kanban"], "jira": ["jira"], "confluence": ["confluence"],
+    "itil": ["itil", "itsm"],
     "documentation": ["documentation", "document"], "mentoring": ["mentoring", "mentor", "mentorship"],
     "cross-functional": ["cross-functional", "cross functional"],
     "cost optimization": ["cost optimization", "cost optimisation", "finops", "cost management"],
@@ -407,7 +414,8 @@ const STOPWORDS = new Set(("a an and or of to in for with on at by the is are wa
  + "inc llc ltd corp gmbh co "
  // job-title & generic-aptitude words: a title is not a skill, in any profession
  + "senior junior principal staff head engineer engineers developer developers manager managers analyst analysts "
- + "specialist consultant coordinator director recruiter mastery discipline solid ops infrastructure player ")
+ + "specialist consultant coordinator director recruiter mastery discipline solid ops infrastructure player "
+ + "ultimately high quality actionable ")
  .trim().split(/\s+/));
 
 /* line-leading responsibility verbs (imperative or third-person -s/-es):
@@ -416,10 +424,13 @@ const STOPWORDS = new Set(("a an and or of to in for with on at by the is are wa
    (Go, Make, Compose). */
 const RESP_VERBS = new Set(("develop manage lead run own drive partner collaborate design build implement create "
  + "maintain support deliver define evaluate conduct guide enable oversee coordinate execute establish improve "
- + "optimize monitor analyze report champion architect automate embrace participate provide ensure").split(" "));
+ + "optimize monitor analyze report champion architect automate embrace participate provide ensure "
+ + "formulate supervise construct investigate compile pinpoint pursue").split(" "));
 function respVerb(w) {
   if (RESP_VERBS.has(w)) return true;
   for (const suf of ["es", "s"]) if (w.endsWith(suf) && RESP_VERBS.has(w.slice(0, -suf.length))) return true;
+  // gerund form: "configuring high quality alerting" -> configure
+  if (w.endsWith("ing") && (RESP_VERBS.has(w.slice(0, -3)) || RESP_VERBS.has(w.slice(0, -3) + "e"))) return true;
   return false;
 }
 
@@ -444,8 +455,17 @@ const CITY_NOISE = new Set(("nyc la sf brooklyn manhattan queens tribeca soho mi
  "buenos aires","sao paulo","hong kong","kuala lumpur"]));
 const TIME_WORDS = new Set(("monday tuesday wednesday thursday friday saturday sunday january february march april "
  + "may june july august september october november december summer winter autumn fall weekday weekdays weekend "
- + "weekends quarterly annually").split(" "));
+ + "weekends quarterly annually pacific mountain central eastern timezone timezones").split(" "));
 const COMPASS = new Set(["north","south","east","west","northeast","northwest","southeast","southwest","midwest"]);
+/* a country name is never a skill — office-location / global-team prose
+   ("collaboration across the U.S. and India") sits OUTSIDE the comp tail.
+   "java" (the island) deliberately excluded: Java the language is curated. */
+const COUNTRIES = new Set(("usa america canada mexico brazil argentina colombia chile peru uk england scotland "
+ + "wales ireland germany france spain portugal italy netherlands belgium sweden norway denmark finland poland "
+ + "romania hungary czechia ukraine switzerland austria greece israel turkey egypt nigeria kenya india pakistan "
+ + "bangladesh nepal china japan taiwan vietnam thailand philippines indonesia malaysia australia").split(" ")
+ .concat(["united states","united kingdom","new zealand","south africa","south korea","sri lanka",
+ "costa rica","saudi arabia","united arab emirates"]));
 const NUMBER_WORDS = new Set(("two three four five six seven eight nine ten eleven twelve twenty thirty forty fifty "
  + "hundred thousand million billion").split(" "));
 
@@ -466,10 +486,10 @@ const SOFT_SKILLS = new Set(["communication","communication skills","verbal comm
    (rock-solid, people-centered, fast-paced, no-fee) and conjunction infixes
    (drag-and-drop). Real hyphenated tech (ci-cd, scikit-learn) doesn't end in
    these adjective suffixes. */
-const HYPHEN_ADJ = new RegExp("^(?:non|anti|semi|no)-[a-z0-9]+$|^[a-z]+-(?:based|focused|driven|facing|friendly|"
+const HYPHEN_ADJ = new RegExp("^(?:non|anti|semi|no|co)-[a-z0-9]+$|^[a-z]+-(?:based|focused|driven|facing|friendly|"
  + "aligned|supported|enabled|managed|aware|ready|first|only|free|approved|specific|related|oriented|native|led|"
  + "owned|backed|market|equity|tier|grade|class|level|scale|speed|time|paced|profile|leading|world|powered|new|"
- + "performing|centric|centered|solid|agnostic|defined|adjacent)$");
+ + "performing|centric|centered|solid|size|sized|side|agnostic|defined|adjacent)$");
 const CONJ_COMPOUND = /-(?:and|or|n)-/;
 const STREET_RE = /\b(?:blvd|boulevard|avenue|suite|ste|pkwy|hwy|plaza|floor)\b/;
 
@@ -514,7 +534,7 @@ function findCurated(text) {
    non-technical JDs alike. */
 const INTRO_HEADINGS = new RegExp("^(?:the |our )?(?:company(?: description| overview| profile)?|"
  + "about (?:us|the company)|who we are|our (?:story|mission|values|culture))\\s*:?\\s*$", "i");
-const JOB_CONTENT = new RegExp("^(?:the role|role overview|about the (?:role|job|position)|"
+const JOB_CONTENT = new RegExp("^(?:the role|role overview|about the (?:role|job|position|opportunity)|the opportunity|"
  + "position (?:overview|summary)|job description|description|overview|(?:key )?responsibilities|duties|"
  + "requirements|(?:minimum|basic|preferred) qualifications|qualifications|what you.?ll (?:do|bring|own)|"
  + "what we.?re looking for|who you are|skills?(?: (?:and|&) experience)?)\\s*:?\\s*$", "i");
@@ -537,6 +557,21 @@ const LEGAL_MARKERS = new RegExp("(equal (employment )?opportunity employer|prou
  + "drug-?free workplace|your base (pay|salary) is one part|reasonable accommodations?|aware of fraudsters|"
  + "recruitment fraud)", "i");
 const AT_COMPANY_PITCH = /^At\s+[A-Z][\w&.'-]*(?:\s+[A-Z][\w&.'-]*){0,2},?\s+(?:we|our|you)\b/;
+/* UNLABELED company-pitch lines — the convention when a scraped posting has no
+   intro header at all: the brand narrative sits directly below the "About the
+   job" chrome ("SentiLink provides innovative identity solutions…", "We've
+   earned recognition from TechCrunch, CNBC, Bloomberg…", "SentiLink is backed
+   by world-class investors…"). Two closed GRAMMAR families, line-scoped:
+   - first-person-plural corporate narrative (We/We're/We've/Our openers —
+     requirements bullets never open in first person plural);
+   - TitleCase brand + corporate pitch verb; the verb whitelist is what
+     protects requirement lines that open with a brand ("Google Cloud
+     Platform experience required" has no pitch verb). */
+const WE_PITCH = /^(?:We(?:[’']re|[’']ve)?|Our)\b/;
+const BRAND_PITCH = new RegExp("^[A-Z][\\w&.'’-]*(?:\\s+[A-Z][\\w&.'’-]*){0,2}\\s+"
+ + "(?:provides|builds|offers|delivers|supports|operates|serves|helps|empowers|creates|connects|combines|"
+ + "partners\\s+with|is\\s+(?:a|an|the|on|backed|building|committed|proud|now|redefining|transforming|"
+ + "revolutionizing)|was\\s+founded|has\\s+(?:been|earned|helped|grown|raised))\\b");
 /* posting-metadata lines ("LOCATION: New York/ New Jersey", "REPORTS TO: Head
    of Infrastructure") — logistics, never skills, and they mimic skill-list
    lines well enough to fool source 1. */
@@ -604,6 +639,7 @@ function prepJD(jd) {
     if (cut && JOB_CONTENT.test(line)) cut = false;
     if (cut) continue;
     if (AT_COMPANY_PITCH.test(line) || METADATA_LINE.test(line)) continue;
+    if (WE_PITCH.test(line) || BRAND_PITCH.test(line)) continue;
     kept.push(raw);
   }
 
@@ -633,6 +669,11 @@ function employerTerms(jd) {
   for (const m of jd.matchAll(/\b([A-Z][\w&.'-]*(?:\s+[A-Z][\w&.'-]*){0,3})\s+is\s+(?:[Pp]roud(?:ly)?\s+(?:to\s+be\s+)?)?(?:an?\s+)?[Ee]qual\s+(?:[Ee]mployment\s+)?[Oo]pportunity/g)) grab(m);
   for (const m of jd.matchAll(/\b([A-Z][\w&.'-]*(?:\s+[A-Z][\w&.'-]*){0,3})\s+is\s+(?:a|an|the)\s+(?:[\w-]+\s+){0,4}?(?:organization|company|companies|firm|business|employer|provider|agency|startup|start-up|subsidiary|division|brand)\b/g)) grab(m);
   for (const m of jd.matchAll(/\bAt\s+([A-Z][\w&.'-]*(?:\s+[A-Z][\w&.'-]*){0,2}),?\s+(?:we|our|you)\b/g)) grab(m);
+  // brand-narrative openers ("SentiLink provides…", "Redbird is an…") name
+  // the employer even when EEO/self-intro conventions are absent
+  for (const m of jd.matchAll(new RegExp("^[ \\t]*([A-Z][\\w&.'’-]*(?:\\s+[A-Z][\\w&.'’-]*){0,2})\\s+"
+    + "(?:provides|builds|offers|delivers|supports|operates|serves|helps|empowers|creates|was\\s+founded|"
+    + "is\\s+(?:a|an|the|backed))\\b", "gm"))) grab(m);
   return toks;
 }
 
@@ -640,7 +681,8 @@ function employerTerms(jd) {
 function phraseOk(p) {
   if (p.length < 2 || p.length > 40) return false;
   if (/^\d[\d,.$%kK+]*$/.test(p)) return false;                 // pure numbers / comp
-  if (US_STATES.has(p) || CITY_NOISE.has(p)) return false;       // places are never skills
+  if (STOPWORDS.has(p)) return false;                            // whole-phrase stopword (e.g, etc)
+  if (US_STATES.has(p) || COUNTRIES.has(p) || CITY_NOISE.has(p)) return false; // places are never skills
   if (SOFT_SKILLS.has(p)) return false;                          // HR-taxonomy soft skills
   if (STREET_RE.test(p)) return false;                           // office addresses
   if (CONJ_COMPOUND.test(p) || HYPHEN_ADJ.test(p)) return false; // grammar, not tools
@@ -651,6 +693,10 @@ function phraseOk(p) {
   // real skill inside it is caught separately by the curated pass
   if (parts.some(w => STOPWORDS.has(w))) return false;
   if (parts.length === 1 && (NUMBER_WORDS.has(p) || TIME_WORDS.has(p) || COMPASS.has(p))) return false;
+  // a phrase that IS just a responsibility verb ("Pursue action items…" after
+  // a mid-line sentence break) is never a skill; verb-named tools (Go, Make,
+  // Compose) are deliberately absent from RESP_VERBS
+  if (parts.length === 1 && respVerb(p)) return false;
   return true;
 }
 function isDoubleCount(p) {
@@ -744,8 +790,17 @@ function keywordScore(jd, resume) {
   }
   const dynCov = dynTotW ? dynHaveW / dynTotW : 1;
 
+  // Confidence-ramped harmonic mean (ported from the Python engine, where a
+  // plain harmonic mean caused the "all-curated JD scores 30%" bug): a JD
+  // whose skills are all curated leaves the dynamic miner 1–2 (often junk)
+  // phrases, and a single unmatched one drove the harmonic mean — and the
+  // whole keyword score — to ~0. Below DYN_RELIABLE_N weighted phrases the
+  // dynamic signal blends back toward the curated score.
+  const DYN_RELIABLE_N = 4.0;
+  const conf = Math.min(1, dynTotW / DYN_RELIABLE_N);
   const hm = (curatedCov + dynCov) ? (2 * curatedCov * dynCov) / (curatedCov + dynCov) : 0;
-  return { score: hm, curatedCov, dynCov,
+  const score = conf * hm + (1 - conf) * curatedCov;
+  return { score, curatedCov, dynCov,
            have: [...haveCur.map(k => [k, 1]), ...haveDyn],
            miss: [...missCur.map(k => [k, 1]), ...missDyn] };
 }

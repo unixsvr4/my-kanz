@@ -67,15 +67,23 @@ where they were validated across the 533-JD corpus. Keywords dominate because
 keyword filtering is what real ATS software actually does first; structure and
 years are secondary gates.
 
-### 2.2 Keyword term `K` — harmonic mean of two coverages
+### 2.2 Keyword term `K` — confidence-ramped harmonic mean of two coverages
 
 ```
-K = 2·C·D / (C + D)
+H = 2·C·D / (C + D)
 C = |curated(J) ∩ curated(R)| / |curated(J)|          (curated coverage)
 D = Σ w(p)·[match(p,R)] / Σ w(p),  p ∈ dyn(J)         (weighted dynamic coverage)
+conf = min(1, Σ w(p) / DYN_RELIABLE_N)                (N = 4.0)
+K = conf·H + (1 − conf)·C
 ```
 
-- **Curated dictionary**: 136 canonical skills across 12 categories (cloud,
+The `conf` ramp is ported from the Python engine's fix for the "all-curated JD
+scores 30%" bug: a JD whose skills are all curated leaves the dynamic miner
+1–2 (often junk) phrases, and a single unmatched one drove the plain harmonic
+mean — and the whole keyword score — to ~0. Below `DYN_RELIABLE_N` weighted
+phrases the dynamic signal blends back toward the curated score.
+
+- **Curated dictionary**: 144 canonical skills across 12 categories (cloud,
   containers, CI/CD, IaC, observability, SRE practice, languages, data,
   OS/networking, security, AI/ML-ops, delivery), each with alias lists
   (`k8s → kubernetes`, `golang → go`, `postgres → postgresql`). Matching uses a
@@ -113,13 +121,22 @@ D = Σ w(p)·[match(p,R)] / Σ w(p),  p ∈ dyn(J)         (weighted dynamic cov
      product names, "Solution Delivery Process") die without enumeration;
   5. "At \<Company\>, we…" pitch lines and posting-metadata lines
      ("LOCATION: New York/ New Jersey", "REPORTS TO: …") dropped;
+  5b. HEADERLESS pitch caught by grammar alone (the SentiLink case: investor/
+     press/office paragraphs sit under the "About the job" chrome with no
+     header any block excision could anchor on) — lines opening with
+     We/We're/We've/Our (first-person-plural corporate narrative; requirement
+     bullets never open that way) or "\<Brand\> provides/builds/is backed/was
+     founded/has earned…" (the corporate-verb whitelist protects requirement
+     lines that open with a brand, e.g. "Google Cloud Platform experience
+     required");
   6. missing-space sentence welds repaired (`best.Here` → `best. Here`) so they
      can't fake dotted tech tokens;
   7. the employer's own name — captured with zero configuration from its EEO
      self-reference, corporate self-intro ("X is a global company…"), or "At X,
      we…" pitch — is never counted as a skill.
-- **Phrase-level noise rejection**: gazetteers (US states, world cities, calendar
-  words, compass directions, spelled-out numbers — never skills in any
+- **Phrase-level noise rejection**: gazetteers (US states, countries, world
+  cities, calendar and time-zone words, compass directions, spelled-out
+  numbers — never skills in any
   profession), HR-taxonomy soft skills ("stakeholder management", "growth
   mindset" — every candidate claims them, scoring them is meaningless),
   job-title words (senior/engineer/manager), pure numbers/comp figures,

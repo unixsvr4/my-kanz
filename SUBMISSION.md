@@ -44,7 +44,7 @@ openers — streamed live, for fractions of a cent.
 
 I ported the architecture of my own 1,900-line Python ATS checker — previously
 tuned against 533 real job descriptions using document-frequency noise analysis —
-into dependency-free JavaScript inside one HTML file: a 136-term curated skill
+into dependency-free JavaScript inside one HTML file: a 144-term curated skill
 dictionary with aliases, dynamic phrase mining with weighted proper-noun
 down-ranking, and a harmonic-mean keyword score combined with structure and
 experience checks. The AI coach calls Anthropic's Messages API directly from the
