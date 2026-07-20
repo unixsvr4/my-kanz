@@ -204,6 +204,8 @@ node /tmp/kanzmatch_test.js
 | Sample SRE JD × unrelated marketing resume (negative control) | **17.3%** | low | partial | fail | FAIL ✅ |
 | Sample SRE JD × **same resume as a PDF** (cupsfilter-generated, parsed by the app's pdf.js path in Node with `pdfjs-dist@3.11.174`) | **88.1%** | 82.9% | 100% | 100% | PASS ✅ — PDF path ≡ text path |
 | Sample SRE JD × **same resume as a .docx** (python-docx-generated with `List Bullet` styles + entity edge cases, parsed by the app's built-in ZIP/OOXML extractor in Node) | **88.1%** | — | 100% (10 bullet lines reconstructed) | 100% | PASS ✅ — DOCX path ≡ text path |
+| **Arabic** SRE JD × **Arabic** SRE resume, mixed Arabic grammar + Latin tool names (2026-07-20, added with the bilingual feature — §4.3) | **94.5%** | 94.5% (C=94.1, D=100) | 88.9% | 100% (5y vs 9y) | PASS ✅ |
+| **Arabic** SRE JD × **Arabic** unrelated marketing resume (negative control) | **26.7%** | 0% | partial | n/a | FAIL ✅ |
 
 Residual "missing" list for the positive case — `iac, capacity planning,
 chaos engineering, multi-region, networking, security, tcp/ip, soc 2 compliance` —
@@ -345,6 +347,93 @@ no library, no network, no storage; the file bytes never leave the browser.
   entities intact, **88.1%** score parity with the plain-text path, and the
   legacy-.doc negative control produces the save-as tip.
 
+### 4.3 Bilingual UI + Arabic-aware scoring engine (added 2026-07-20)
+
+Requested explicitly for Kanz's home market (Saudi Arabia): a 🌐 toggle switches
+the whole UI between English and Arabic with a genuine `dir="rtl"` layout, and —
+the harder half — the scoring engine itself understands Arabic JDs/resumes rather
+than just relabeling English-only logic.
+
+**UI layer.** Every static string routes through a `data-i18n`/`data-i18n-ph`/
+`data-i18n-title` attribute scan and an `I18N.{en,ar}` dictionary; dynamic
+render paths (`structureScore`'s checks, `yearsScore`'s sentences, upload/AI
+error strings) were refactored to return **translation keys**, not baked-in
+English literals, so a language switch after results are already on screen
+re-renders instead of requiring a re-analyze (`renderResults()` is idempotent
+and reused by both the Analyze click and `applyI18n()`). RTL is `dir="rtl"` on
+`<html>` — CSS Grid/Flexbox mirror automatically under `dir`; the only manual
+fixes were a hardcoded `text-align:right` → logical `text-align:end`, an
+Arabic-capable font fallback (`"Noto Sans Arabic", "Geeza Pro", Tahoma`), and
+`unicode-bidi:plaintext` on chips/values so embedded Latin tech terms (`aws`,
+`kubernetes`) don't get bidi-reordered inside Arabic sentences. Both textareas
+get `dir="auto"` so pasted JD/resume text direction is detected per-field,
+independent of the current UI language.
+
+**Engine layer — what actually had to change, and what didn't:**
+
+- **Digit normalization**: `normalizeDigits()` maps Arabic-Indic numerals
+  (٠–٩) to Western digits once, in `analyze()`, before any `\d` regex runs —
+  a no-op on English text, and it makes every existing years/quantified-
+  achievement regex work unmodified on `٥+ سنوات` the same as `5+ years`.
+- **Word-boundary matching is script-aware.** The original `boundaryRe()`
+  boundary class `[^a-z0-9+]` treats *every* Arabic letter as "already a
+  boundary" (Arabic isn't in `a-z0-9`), which would let a short Arabic alias
+  false-match as a substring of a longer, unrelated word. Arabic aliases now
+  get a dedicated boundary class requiring the neighbor be neither a Latin
+  alphanumeric nor an **Arabic letter**. First attempt used the full Arabic
+  Unicode block (`؀-ۿ`) for that class and broke on the very first real test —
+  Arabic punctuation (، ؛) lives inside that same block, so a word followed by
+  an Arabic comma was wrongly treated as still mid-word. Fixed by narrowing the
+  boundary class to `ء-ي` (letters only), leaving Arabic punctuation
+  and digits as valid boundaries, exactly like English `,`/`.` are.
+- **The definite article "ال" attaches with no space** ("موثوقية" vs
+  "الموثوقية" — reliability / *the* reliability), so a single hand-written
+  Arabic alias can miss its own article-bearing or article-free form on the
+  other side of the JD/resume pair. Rather than hand-authoring both spellings
+  for every alias, `ALIAS_INDEX` construction auto-derives the alternate form
+  for any alias containing Arabic characters. This alone fixed two false
+  negatives (`reliability`, `monitoring`) in the validation fixture (§3.1).
+- **Curated Arabic aliases were added selectively, not exhaustively**: practice/
+  domain vocabulary (`المراقبة` monitoring, `الأتمتة` automation, `الشبكات`
+  networking, `الأمن السيبراني` cybersecurity, `الامتثال` compliance,
+  `الذكاء الاصطناعي` AI, `التوثيق` documentation, `الترحيل` migration, ~25 terms
+  total) got real Arabic aliases; tool/product names (Kubernetes, Terraform,
+  AWS, Python) were deliberately left Latin-only, because that mirrors how
+  Gulf tech job postings actually code-switch — nobody writes "كوبرنيتيس" for
+  Kubernetes in a real posting.
+- **Structure-check section headers** (`structureScore`) now alternate English
+  and Arabic patterns in the same regex (`/summary|profile|ملخص|نبذة/`, etc.)
+  rather than branching on detected language — simpler, and harmless for
+  English text since it never contains the Arabic alternatives.
+- **`prepJD`'s boilerplate stripper** gained a *small*, additive set of common
+  Arabic section headers (`عن الشركة`, `المسؤوليات`, `المتطلبات`, `المزايا`)
+  in the existing `INTRO_HEADINGS`/`JOB_CONTENT`/`TAIL_HEADINGS` alternations.
+  This is **not** claimed to be corpus-validated the way the English stripper
+  is (§2.2 was tuned against 533 real JDs); it is a reasonable first pass,
+  documented here as a known limitation rather than overclaimed.
+- **Deliberately out of scope**: no Arabic proper-noun mining (source 3 of
+  `extractDynamicPhrases` relies on Title-Case, which doesn't exist in
+  Arabic — sources 1 and 2, skill-list-line splitting and punctuated tokens,
+  already work in Arabic and carried the dynamic signal in testing); no
+  Arabic month-name date-range parsing (only the ISO-ish `YYYY–YYYY`/
+  `YYYY–حتى الآن` form is handled); no Saudi-city gazetteer parity with the
+  English `US_STATES` noise filter. None of these caused a validation failure
+  in testing, but a larger real-world Arabic JD corpus could expose gaps here
+  the same way the original English engine needed corpus tuning (§2.2).
+
+**Verified** (§3.1, added 2026-07-20): a synthetic Arabic SRE JD × Arabic SRE
+resume (mixed Arabic grammar with Latin tool names, matching real posting
+style) scores **94.5%** with correct structure detection of Arabic section
+headers (`نبذة`, `المهارات`, `الخبرة`, `التعليم`) and correct Arabic years-of-
+experience parsing (`٥+ سنوات` → required 5); the one residual "missing" item
+(`cloud computing`) is genuine — the resume never restates it. An Arabic
+negative control (same JD × an unrelated Arabic marketing resume) scores
+**26.7%** with **zero** false-positive keyword matches, confirming the
+bilingual engine discriminates correctly in both directions, not just on the
+positive case. The pre-existing English validation (§3.1 row 1) was re-run
+after every engine change in this section and stayed byte-identical, confirming
+zero regression to English scoring.
+
 ## 5. UI / dataviz decisions
 
 - Score display follows the validated reference dataviz palette: single-hue blue
@@ -383,8 +472,10 @@ moves is the user's own opt-in API spend, displayed per-run in the UI.
 - Future work: (a) re-validate the JS port against the full 533-JD corpus and
   report per-JD score deltas vs the Python engine; (b) ~~client-side PDF text
   extraction~~ — **shipped** (§4.1); next step is OCR fallback for scanned PDFs;
-  (c) Arabic-language JD support (Kanz's home market) — the dynamic extractor is
-  Latin-script-biased today; (d) Web Worker offload for very large corpora;
+  (c) ~~Arabic-language JD support (Kanz's home market)~~ — **shipped** (§4.3,
+  bilingual UI + Arabic-aware scoring engine); next step is corpus-validating
+  the Arabic boilerplate stripper and Saudi-city gazetteer the way §2.2 was
+  validated for English; (d) Web Worker offload for very large corpora;
   (e) ~~vendor `pdf.min.js` for fully-offline PDF parsing~~ — **shipped**
   (§4.1, `app/vendor/`, hash-verified against the official npm package).
 

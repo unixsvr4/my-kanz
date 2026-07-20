@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -63,7 +63,7 @@
   * { box-sizing: border-box; }
   body {
     margin: 0; background: var(--page); color: var(--ink);
-    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", "Noto Sans Arabic", "Geeza Pro", Tahoma, sans-serif;
   }
   main { max-width: 1080px; margin: 0 auto; padding: 0 20px 80px; }
 
@@ -125,7 +125,7 @@
   .bars { flex: 1; min-width: 260px; display: grid; gap: 12px; }
   .barrow { display: grid; grid-template-columns: 150px 1fr 52px; gap: 10px; align-items: center; }
   .barrow .lbl { font-size: 13px; color: var(--ink-2); }
-  .barrow .val { font-size: 13px; text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); }
+  .barrow .val { font-size: 13px; text-align: end; font-variant-numeric: tabular-nums; color: var(--ink); }
   .track { height: 10px; border-radius: 4px; background: var(--bar-track); overflow: hidden; }
   .fill { height: 100%; border-radius: 4px; background: var(--accent); width: 0;
           transition: width 700ms cubic-bezier(.2,.8,.2,1); }
@@ -137,6 +137,7 @@
   .chip.have { background: var(--chip-good-bg); color: var(--good-text); }
   .chip.miss { background: var(--chip-bad-bg); color: var(--critical); }
   .chip .w { opacity: 0.65; font-size: 11px; }
+  .chip, .barrow .val, .costline { unicode-bidi: plaintext; }
 
   .checklist { list-style: none; margin: 8px 0 0; padding: 0; font-size: 13.5px; }
   .checklist li { padding: 3px 0; }
@@ -160,7 +161,7 @@
     white-space: pre-wrap; background: var(--code-bg); border-radius: 8px;
     padding: 14px; font-size: 13.5px; min-height: 90px; border: 1px solid var(--border);
   }
-  #aiOut:empty::before { content: "AI output streams here — pick a feature and press Run."; color: var(--muted); }
+  #aiOut:empty::before { content: attr(data-empty-hint); color: var(--muted); }
   .costline { font-size: 12px; color: var(--muted); margin-top: 8px; }
   .err { color: var(--critical); font-size: 13px; margin-top: 8px; }
 
@@ -172,31 +173,32 @@
 <main>
   <header>
     <div class="logo">Kanz<span>Match</span></div>
-    <div class="tag">AI resume ↔ job-description fit analyzer · scores locally, coaches with Claude</div>
+    <div class="tag" data-i18n="tag">AI resume ↔ job-description fit analyzer · scores locally, coaches with Claude</div>
     <div class="spacer"></div>
-    <div class="privacy">🔒 Your resume never leaves this device*</div>
-    <button id="themeBtn" class="btn-ghost" title="Toggle theme">◐ Theme</button>
+    <div class="privacy" data-i18n="privacy">🔒 Your resume never leaves this device*</div>
+    <button id="langBtn" class="btn-ghost" title="Toggle language / تبديل اللغة">🌐 العربية</button>
+    <button id="themeBtn" class="btn-ghost" data-i18n-title="themeTitle" title="Toggle theme"><span data-i18n="themeBtn">◐ Theme</span></button>
   </header>
 
   <div class="grid2">
     <div class="card">
-      <h2>1 · Job description</h2>
-      <div class="sub">Paste the posting, or load the built-in sample.</div>
-      <textarea id="jd" spellcheck="false" placeholder="Paste the job description here…"></textarea>
+      <h2 data-i18n="jdHeading">1 · Job description</h2>
+      <div class="sub" data-i18n="jdSub">Paste the posting, or load the built-in sample.</div>
+      <textarea id="jd" spellcheck="false" dir="auto" data-i18n-ph="jdPlaceholder" placeholder="Paste the job description here…"></textarea>
       <div class="toolrow">
-        <button class="btn-ghost" id="jdSample">Load sample JD</button>
-        <label class="btn btn-ghost" for="jdFile">Upload .txt/.md/.pdf/.docx</label>
+        <button class="btn-ghost" id="jdSample" data-i18n="loadSampleJd">Load sample JD</button>
+        <label class="btn btn-ghost" for="jdFile" data-i18n="uploadLabel">Upload .txt/.md/.pdf/.docx</label>
         <input type="file" id="jdFile" accept=".txt,.md,.pdf,.docx">
         <span class="hint" id="jdFileStatus"></span>
       </div>
     </div>
     <div class="card">
-      <h2>2 · Your resume</h2>
-      <div class="sub">Plain text works best (export your resume as .txt or .md).</div>
-      <textarea id="rz" spellcheck="false" placeholder="Paste your resume here…"></textarea>
+      <h2 data-i18n="rzHeading">2 · Your resume</h2>
+      <div class="sub" data-i18n="rzSub">Plain text works best (export your resume as .txt or .md).</div>
+      <textarea id="rz" spellcheck="false" dir="auto" data-i18n-ph="rzPlaceholder" placeholder="Paste your resume here…"></textarea>
       <div class="toolrow">
-        <button class="btn-ghost" id="rzSample">Load sample resume</button>
-        <label class="btn btn-ghost" for="rzFile">Upload .txt/.md/.pdf/.docx</label>
+        <button class="btn-ghost" id="rzSample" data-i18n="loadSampleRz">Load sample resume</button>
+        <label class="btn btn-ghost" for="rzFile" data-i18n="uploadLabel">Upload .txt/.md/.pdf/.docx</label>
         <input type="file" id="rzFile" accept=".txt,.md,.pdf,.docx">
         <span class="hint" id="rzFileStatus"></span>
       </div>
@@ -204,36 +206,36 @@
   </div>
 
   <div class="actions">
-    <button class="btn-primary" id="run">Analyze match</button>
-    <span class="hint">Instant, offline, $0 — the deterministic score runs entirely in your browser.</span>
+    <button class="btn-primary" id="run" data-i18n="analyzeBtn">Analyze match</button>
+    <span class="hint" data-i18n="analyzeHint">Instant, offline, $0 — the deterministic score runs entirely in your browser.</span>
   </div>
 
   <!-- ============================ RESULTS ============================ -->
   <section id="results">
     <div class="card">
-      <h2>Match score</h2>
-      <div class="sub">Weighted: keywords 70% (harmonic mean of curated + JD-specific phrases) · structure 15% · experience 15% · pass ≥ 80%</div>
+      <h2 data-i18n="scoreHeading">Match score</h2>
+      <div class="sub" data-i18n="scoreSub">Weighted: keywords 70% (harmonic mean of curated + JD-specific phrases) · structure 15% · experience 15% · pass ≥ 80%</div>
       <div class="scorehead">
         <div class="hero">
           <div class="num" id="scoreNum">–</div>
           <div class="verdict" id="scoreVerdict"></div>
         </div>
         <div class="bars">
-          <div class="barrow"><span class="lbl">Keyword match (70%)</span><div class="track"><div class="fill" id="barKw"></div></div><span class="val" id="valKw">–</span></div>
-          <div class="barrow"><span class="lbl">Structure (15%)</span><div class="track"><div class="fill" id="barSt"></div></div><span class="val" id="valSt">–</span></div>
-          <div class="barrow"><span class="lbl">Experience (15%)</span><div class="track"><div class="fill" id="barYr"></div></div><span class="val" id="valYr">–</span></div>
+          <div class="barrow"><span class="lbl" data-i18n="barKwLbl">Keyword match (70%)</span><div class="track"><div class="fill" id="barKw"></div></div><span class="val" id="valKw">–</span></div>
+          <div class="barrow"><span class="lbl" data-i18n="barStLbl">Structure (15%)</span><div class="track"><div class="fill" id="barSt"></div></div><span class="val" id="valSt">–</span></div>
+          <div class="barrow"><span class="lbl" data-i18n="barYrLbl">Experience (15%)</span><div class="track"><div class="fill" id="barYr"></div></div><span class="val" id="valYr">–</span></div>
         </div>
       </div>
     </div>
 
     <div class="grid2">
       <div class="card">
-        <h2>✓ Matched keywords</h2>
+        <h2><span data-i18n="haveHeading">✓ Matched keywords</span></h2>
         <div class="sub" id="haveCount"></div>
         <div class="chips" id="haveChips"></div>
       </div>
       <div class="card">
-        <h2>✗ Missing keywords</h2>
+        <h2><span data-i18n="missHeading">✗ Missing keywords</span></h2>
         <div class="sub" id="missCount"></div>
         <div class="chips" id="missChips"></div>
       </div>
@@ -241,47 +243,47 @@
 
     <div class="grid2">
       <div class="card">
-        <h2>Structure checks</h2>
+        <h2 data-i18n="structHeading">Structure checks</h2>
         <ul class="checklist" id="structList"></ul>
       </div>
       <div class="card">
-        <h2>Experience</h2>
+        <h2 data-i18n="yearsHeading">Experience</h2>
         <ul class="checklist" id="yearsList"></ul>
       </div>
     </div>
 
     <!-- ============================ AI PANEL ============================ -->
     <div class="card">
-      <h2>3 · AI coach <span style="font-weight:400;color:var(--muted)">(optional — bring your own Anthropic API key)</span></h2>
-      <div class="sub">The key is used directly from your browser to api.anthropic.com and stored only in this tab (never sent anywhere else). Each run costs fractions of a cent.</div>
+      <h2><span data-i18n="aiHeading">3 · AI coach</span> <span style="font-weight:400;color:var(--muted)" data-i18n="aiHeadingSub">(optional — bring your own Anthropic API key)</span></h2>
+      <div class="sub" data-i18n="aiSub">The key is used directly from your browser to api.anthropic.com and stored only in this tab (never sent anywhere else). Each run costs fractions of a cent.</div>
       <div class="keyrow">
-        <input type="password" id="apiKey" placeholder="sk-ant-…  (Anthropic API key)" autocomplete="off">
+        <input type="password" id="apiKey" data-i18n-ph="apiKeyPh" placeholder="sk-ant-…  (Anthropic API key)" autocomplete="off">
         <select id="model">
-          <option value="claude-opus-4-8" selected>Claude Opus 4.8 (best)</option>
-          <option value="claude-haiku-4-5">Claude Haiku 4.5 (economy)</option>
+          <option value="claude-opus-4-8" selected data-i18n="modelOpus">Claude Opus 4.8 (best)</option>
+          <option value="claude-haiku-4-5" data-i18n="modelHaiku">Claude Haiku 4.5 (economy)</option>
         </select>
-        <label style="font-size:12px;color:var(--muted)"><input type="checkbox" id="rememberKey"> remember key (this browser)</label>
+        <label style="font-size:12px;color:var(--muted)"><input type="checkbox" id="rememberKey"> <span data-i18n="rememberKey">remember key (this browser)</span></label>
       </div>
       <div class="tabs" role="tablist">
-        <button class="tab" role="tab" aria-selected="true"  data-f="summary">✍️ Rewrite my summary</button>
-        <button class="tab" role="tab" aria-selected="false" data-f="gaps">🧭 Gap-closing plan</button>
-        <button class="tab" role="tab" aria-selected="false" data-f="cover">✉️ Cover-letter opener</button>
+        <button class="tab" role="tab" aria-selected="true"  data-f="summary" data-i18n="tabSummary">✍️ Rewrite my summary</button>
+        <button class="tab" role="tab" aria-selected="false" data-f="gaps" data-i18n="tabGaps">🧭 Gap-closing plan</button>
+        <button class="tab" role="tab" aria-selected="false" data-f="cover" data-i18n="tabCover">✉️ Cover-letter opener</button>
       </div>
       <div class="toolrow" style="margin:0 0 10px">
-        <button class="btn-primary" id="aiRun">Run AI feature</button>
-        <button class="btn-ghost" id="aiStop" style="display:none">Stop</button>
+        <button class="btn-primary" id="aiRun" data-i18n="aiRunBtn">Run AI feature</button>
+        <button class="btn-ghost" id="aiStop" style="display:none" data-i18n="aiStopBtn">Stop</button>
       </div>
-      <div id="aiOut" aria-live="polite"></div>
+      <div id="aiOut" aria-live="polite" data-empty-hint="AI output streams here — pick a feature and press Run."></div>
       <div class="err" id="aiErr"></div>
       <div class="costline" id="aiCost"></div>
     </div>
   </section>
 
   <footer>
-    <b>Cost model:</b> static single file (host anywhere free — GitHub Pages, Cloudflare Pages, S3), $0 servers, $0 database,
-    $0 default inference (scoring is deterministic + client-side). AI coach is opt-in BYOK.
-    <br>*The deterministic analyzer is fully offline. The optional AI coach sends the JD + resume to Anthropic's API with <i>your</i> key, at your request.
-    <br>Built for the Kanz AI Training Hackathon 2026 · scoring engine derived from an open ~1,900-line Python ATS checker tuned on a 533-JD corpus.
+    <b data-i18n="footerCostLabel">Cost model:</b> <span data-i18n="footerCost">static single file (host anywhere free — GitHub Pages, Cloudflare Pages, S3), $0 servers, $0 database,
+    $0 default inference (scoring is deterministic + client-side). AI coach is opt-in BYOK.</span>
+    <br><span data-i18n="footerOffline">*The deterministic analyzer is fully offline. The optional AI coach sends the JD + resume to Anthropic's API with <i>your</i> key, at your request.</span>
+    <br><span data-i18n="footerBuilt">Built for the Kanz AI Training Hackathon 2026 · scoring engine derived from an open ~1,900-line Python ATS checker tuned on a 533-JD corpus.</span>
   </footer>
 </main>
 
@@ -298,6 +300,14 @@
    proper nouns (down-weighted 0.5), with stopword + double-count filters.
    ===================================================================== */
 
+/* Arabic-Indic digits (٠-٩) -> Western digits (0-9), so every \d regex in the
+   engine (years, quantified-achievement counts, date ranges) works whether a
+   JD/resume writes "5+ years" or "٥+ سنوات". A no-op on pure-English text. */
+function normalizeDigits(s) {
+  return s.replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d));
+}
+const ARABIC_CHAR_RE = /[؀-ۿ]/;
+
 /* ---------------- curated keyword dictionary (canonical -> aliases) --- */
 const KEYWORD_DB = {
   "Cloud": {
@@ -312,18 +322,20 @@ const KEYWORD_DB = {
     "multi-region": ["multi-region", "multi region"], "serverless": ["serverless"],
     "hybrid cloud": ["hybrid cloud"], "multi-cloud": ["multi-cloud", "multi cloud"],
     "oci": ["oci", "oracle cloud"],
+    "cloud computing": ["cloud computing", "الحوسبة السحابية"],
   },
   "Containers & Orchestration": {
     "kubernetes": ["kubernetes", "k8s", "container orchestration", "orchestration"],
-    "docker": ["docker", "containerization", "containers", "container"],
+    "docker": ["docker", "containerization", "containers", "container", "الحاويات"],
     "helm": ["helm"], "istio": ["istio", "service mesh"], "argocd": ["argocd", "argo cd"],
     "karpenter": ["karpenter"], "autoscaling": ["autoscaling", "auto-scaling", "auto scaling", "hpa"],
     "kustomize": ["kustomize"], "containerd": ["containerd"],
   },
   "CI/CD & Automation": {
-    "ci/cd": ["ci/cd", "cicd", "ci-cd", "continuous integration", "continuous delivery", "continuous deployment"],
+    "ci/cd": ["ci/cd", "cicd", "ci-cd", "continuous integration", "continuous delivery", "continuous deployment",
+      "التكامل المستمر", "النشر المستمر"],
     "jenkins": ["jenkins"], "github actions": ["github actions"], "gitlab": ["gitlab", "gitlab ci"],
-    "git": ["git", "version control"], "automation": ["automation", "automate", "automated"],
+    "git": ["git", "version control"], "automation": ["automation", "automate", "automated", "الأتمتة"],
     "gitops": ["gitops"], "circleci": ["circleci"], "spinnaker": ["spinnaker"],
   },
   "Infrastructure as Code": {
@@ -333,8 +345,8 @@ const KEYWORD_DB = {
   },
   "Observability": {
     "prometheus": ["prometheus"], "grafana": ["grafana"], "datadog": ["datadog"],
-    "monitoring": ["monitoring", "monitor"], "logging": ["logging", "log aggregation"],
-    "alerting": ["alerting", "alerts"], "observability": ["observability"],
+    "monitoring": ["monitoring", "monitor", "المراقبة"], "logging": ["logging", "log aggregation"],
+    "alerting": ["alerting", "alerts", "التنبيهات"], "observability": ["observability"],
     "elk": ["elk", "elasticsearch", "kibana", "logstash", "opensearch"], "splunk": ["splunk"],
     "sumologic": ["sumologic", "sumo logic"],
     "dashboards": ["dashboard", "dashboards"],
@@ -343,10 +355,10 @@ const KEYWORD_DB = {
     "sli": ["sli", "slis"], "sla": ["sla", "slas"],
   },
   "SRE Practices": {
-    "sre": ["sre", "site reliability"], "incident response": ["incident response", "incident management"],
-    "on-call": ["on-call", "on call", "oncall", "pagerduty"], "postmortem": ["postmortem", "post-mortem", "root cause analysis", "rca"],
-    "reliability": ["reliability"], "high availability": ["high availability", "ha", "highly available"],
-    "disaster recovery": ["disaster recovery", "dr"], "capacity planning": ["capacity planning"],
+    "sre": ["sre", "site reliability"], "incident response": ["incident response", "incident management", "الاستجابة للحوادث"],
+    "on-call": ["on-call", "on call", "oncall", "pagerduty", "المناوبة"], "postmortem": ["postmortem", "post-mortem", "root cause analysis", "rca"],
+    "reliability": ["reliability", "الموثوقية"], "high availability": ["high availability", "ha", "highly available"],
+    "disaster recovery": ["disaster recovery", "dr", "التعافي من الكوارث"], "capacity planning": ["capacity planning"],
     "chaos engineering": ["chaos engineering", "chaos"], "runbook": ["runbook", "runbooks"],
     "toil": ["toil", "toil reduction"], "error budget": ["error budget", "error budgets"],
   },
@@ -365,35 +377,37 @@ const KEYWORD_DB = {
   },
   "OS & Networking": {
     "linux": ["linux", "unix", "rhel", "ubuntu", "centos"],
-    "networking": ["networking", "network", "networks"],
+    "networking": ["networking", "network", "networks", "الشبكات"],
     "cdn": ["cdn", "cdns", "content delivery network"],
     "dns": ["dns"], "tcp/ip": ["tcp/ip", "tcp"], "http": ["http", "https"],
     "load balancing": ["load balancing", "load balancer", "load balancers", "nginx", "haproxy"],
-    "vpn": ["vpn"], "firewall": ["firewall", "firewalls", "fw"], "windows": ["windows server", "windows"],
+    "vpn": ["vpn", "الشبكة الافتراضية الخاصة"], "firewall": ["firewall", "firewalls", "fw", "جدار الحماية"],
+    "windows": ["windows server", "windows"],
   },
   "Security & Compliance": {
-    "security": ["security", "devsecops"], "encryption": ["encryption", "tls", "ssl"],
-    "compliance": ["compliance", "soc 2", "soc2", "hipaa", "pci", "fedramp"],
+    "security": ["security", "devsecops", "الأمن", "الأمن السيبراني"], "encryption": ["encryption", "tls", "ssl", "التشفير"],
+    "compliance": ["compliance", "soc 2", "soc2", "hipaa", "pci", "fedramp", "الامتثال"],
     "vault": ["vault", "secrets management", "secrets"], "zero trust": ["zero trust", "zero-trust"],
-    "vulnerability": ["vulnerability", "vulnerability management", "cve"],
-    "authentication": ["authentication", "oauth", "sso", "saml"], "audit": ["audit", "auditing"],
+    "vulnerability": ["vulnerability", "vulnerability management", "cve", "الثغرات الأمنية"],
+    "authentication": ["authentication", "oauth", "sso", "saml", "المصادقة"], "audit": ["audit", "auditing", "التدقيق"],
     "waf": ["waf", "web application firewall"], "selinux": ["selinux"],
     "ids/ips": ["ids/ips", "ips/ids", "intrusion detection", "intrusion prevention"],
   },
   "AI/ML Ops": {
-    "mlops": ["mlops", "ml ops"], "llm": ["llm", "llms", "large language model"],
-    "gpu": ["gpu", "gpus", "cuda"], "ai": ["ai", "artificial intelligence", "genai", "generative ai"],
-    "machine learning": ["machine learning", "ml"], "inference": ["inference"],
+    "mlops": ["mlops", "ml ops"], "llm": ["llm", "llms", "large language model", "نماذج اللغة الكبيرة"],
+    "gpu": ["gpu", "gpus", "cuda"], "ai": ["ai", "artificial intelligence", "genai", "generative ai", "الذكاء الاصطناعي"],
+    "machine learning": ["machine learning", "ml", "تعلم الآلة", "التعلم الآلي"], "inference": ["inference"],
     "ai coding assistant": ["github copilot", "copilot", "cursor", "claude code", "codeium"],
   },
   "Delivery & Collaboration": {
     "agile": ["agile", "scrum", "kanban"], "jira": ["jira"], "confluence": ["confluence"],
     "itil": ["itil", "itsm"],
-    "documentation": ["documentation", "document"], "mentoring": ["mentoring", "mentor", "mentorship"],
-    "cross-functional": ["cross-functional", "cross functional"],
-    "cost optimization": ["cost optimization", "cost optimisation", "finops", "cost management"],
-    "migration": ["migration", "migrations", "migrate"], "microservices": ["microservices", "micro-services"],
-    "api": ["api", "apis", "rest", "restful", "grpc"], "troubleshooting": ["troubleshooting", "troubleshoot", "debugging", "debug"],
+    "documentation": ["documentation", "document", "التوثيق"], "mentoring": ["mentoring", "mentor", "mentorship", "التوجيه", "الإرشاد"],
+    "cross-functional": ["cross-functional", "cross functional", "متعدد الوظائف"],
+    "cost optimization": ["cost optimization", "cost optimisation", "finops", "cost management", "تحسين التكلفة"],
+    "migration": ["migration", "migrations", "migrate", "الترحيل"], "microservices": ["microservices", "micro-services", "الخدمات المصغرة"],
+    "api": ["api", "apis", "rest", "restful", "grpc"],
+    "troubleshooting": ["troubleshooting", "troubleshoot", "debugging", "debug", "استكشاف الأخطاء وإصلاحها"],
   },
 };
 
@@ -417,6 +431,19 @@ const STOPWORDS = new Set(("a an and or of to in for with on at by the is are wa
  + "specialist consultant coordinator director recruiter mastery discipline solid ops infrastructure player "
  + "ultimately high quality actionable ")
  .trim().split(/\s+/));
+
+/* Arabic function words / pronouns / generic-aptitude & job-title words —
+   the same role a JD plays in English (prepositions, "years", "required",
+   job titles, corporate suffixes) never forms a skill phrase on its own. */
+("من في على إلى أن إن كان يكون هذا هذه ذلك تلك الذي التي الذين مع عن كما "
+ + "او أو ثم بل لا نعم قد لقد سوف لن لم لما عند عندما حيث حتى بين خلال أثناء دون بدون فوق تحت أمام خلف "
+ + "نحو نحن انت أنت انتم أنتم هو هي هم هن انا أنا لهذا لذلك هناك هنا أي كل بعض جميع كافة عدة نفس ذات "
+ + "سنة سنوات سنه اعوام أعوام عام أعواما شركة الشركة مؤسسة المؤسسة محدودة ذمم "
+ + "دوام وظيفة وظائف فرصة فرص مطلوب مطلوبة يشترط يفضل خبرة الخبرة مهارة مهارات معرفة قدرة قدرات "
+ + "قادر قادرة إجادة اجادة يجيد تجيد ضمن لدى لدي كافية جيدة ممتازة عالية مستوى المستوى مجال "
+ + "متطلبات الوظيفة المسمى الوظيفي الوصف الوظيفي نبذة عنا نحن رسالة تقديم طلب التقديم "
+ + "مدير مديرة موظف موظفة مسؤول مسؤولة رئيس رئيسي أول مبتدئ متقدم خريج خريجة")
+ .trim().split(/\s+/).forEach(w => STOPWORDS.add(w));
 
 /* line-leading responsibility verbs (imperative or third-person -s/-es):
    "Lead market research" is the verb "lead" + the skill "market research" —
@@ -481,6 +508,10 @@ const SOFT_SKILLS = new Set(["communication","communication skills","verbal comm
  "can-do attitude","positive attitude","multitasking","decision making","decision-making","emotional intelligence",
  "prioritization","initiative","curiosity","resilience","professionalism","active listening","agile practices",
  "solution delivery process","risk management","data management","strategic thinking","relationship building"]);
+["مهارات التواصل","التواصل","العمل الجماعي","روح الفريق","العمل ضمن فريق","القيادة","حل المشكلات",
+ "إدارة الوقت","الاهتمام بالتفاصيل","التفكير النقدي","المرونة","الإبداع","الدافعية","الالتزام",
+ "الأمانة","العمل تحت الضغط","التعامل مع ضغط العمل","بناء العلاقات","التفكير الاستراتيجي",
+ "مهارات التنظيم","مهارات شخصية","روح المبادرة"].forEach(s => SOFT_SKILLS.add(s));
 
 /* hyphen compounds that are grammar, not tools: descriptive adjectives
    (rock-solid, people-centered, fast-paced, no-fee) and conjunction infixes
@@ -499,7 +530,18 @@ const PROPER_NOUN_WEIGHT = 0.5;
 const ALIAS_INDEX = [];
 for (const cat of Object.values(KEYWORD_DB))
   for (const [canon, aliases] of Object.entries(cat))
-    for (const a of aliases) ALIAS_INDEX.push([a, canon]);
+    for (const a of aliases) {
+      ALIAS_INDEX.push([a, canon]);
+      // Arabic's definite article "ال" attaches with no space ("موثوقية" /
+      // "الموثوقية"), so a curated Arabic alias can silently miss its own
+      // article-bearing (or article-free) form on the other side of the
+      // JD/resume pair. Auto-derive the alternate form instead of hand-
+      // writing both spellings for every alias.
+      if (ARABIC_CHAR_RE.test(a)) {
+        const alt = a.startsWith("ال") ? a.slice(2) : "ال" + a;
+        if (alt !== a) ALIAS_INDEX.push([alt, canon]);
+      }
+    }
 ALIAS_INDEX.sort((x, y) => y[0].length - x[0].length);
 const CURATED_TOKENS = new Set(ALIAS_INDEX.map(([a]) => a));
 
@@ -512,7 +554,18 @@ for (const t of CURATED_TOKENS)
     for (const f of t.split("/")) if (f.trim().length >= 2) CURATED_SLASH_FRAGS.add(f.trim());
 
 function escapeRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+// letters-only Arabic range for boundary checks: the FULL Arabic Unicode
+// block (؀-ۿ, used by ARABIC_CHAR_RE for detection) also contains Arabic
+// punctuation (، ؛ ؟) and digits, which must still count as boundaries —
+// a word followed by an Arabic comma is not "mid-word".
+const ARABIC_LETTERS = "\\u0621-\\u064A";
 function boundaryRe(alias) {
+  // Arabic aliases need an Arabic-aware boundary: [^a-z0-9] treats every
+  // Arabic letter as "already a boundary", so e.g. "أمن" would false-match
+  // inside a longer word like "الأمنية". Require the neighbor be neither a
+  // Latin alphanumeric NOR an Arabic letter instead.
+  if (ARABIC_CHAR_RE.test(alias))
+    return new RegExp("(^|[^" + ARABIC_LETTERS + "])" + escapeRe(alias).replace(/ /g, "\\s+") + "($|[^" + ARABIC_LETTERS + "])");
   // word-boundary-ish match that tolerates c++, ci/cd, node.js, tcp/ip
   return new RegExp("(^|[^a-z0-9+])" + escapeRe(alias).replace(/ /g, "[\\s-]") + "($|[^a-z0-9+])", "i");
 }
@@ -533,11 +586,13 @@ function findCurated(text) {
    shape, never per-company vocabulary, so it holds for technical and
    non-technical JDs alike. */
 const INTRO_HEADINGS = new RegExp("^(?:the |our )?(?:company(?: description| overview| profile)?|"
- + "about (?:us|the company)|who we are|our (?:story|mission|values|culture))\\s*:?\\s*$", "i");
+ + "about (?:us|the company)|who we are|our (?:story|mission|values|culture)|"
+ + "عن الشركة|نبذة عن الشركة|من نحن)\\s*:?\\s*$", "i");
 const JOB_CONTENT = new RegExp("^(?:the role|role overview|about the (?:role|job|position|opportunity)|the opportunity|"
  + "position (?:overview|summary)|job description|description|overview|(?:key )?responsibilities|duties|"
  + "requirements|(?:minimum|basic|preferred) qualifications|qualifications|what you.?ll (?:do|bring|own)|"
- + "what we.?re looking for|who you are|skills?(?: (?:and|&) experience)?)\\s*:?\\s*$", "i");
+ + "what we.?re looking for|who you are|skills?(?: (?:and|&) experience)?|"
+ + "المسؤوليات|المهام|الواجبات|المتطلبات|الشروط|المؤهلات المطلوبة|المؤهلات|الوصف الوظيفي)\\s*:?\\s*$", "i");
 /* [ \t]*:?\s*$ anchoring matters: "The Perks:" / "Benefits:" carry a trailing
    colon — a bare EOL anchor silently misses every such header. */
 const TAIL_HEADINGS = new RegExp("^(?:the |our )?(?:benefits?(?: (?:and|&) perks?)?|"
@@ -547,7 +602,8 @@ const TAIL_HEADINGS = new RegExp("^(?:the |our )?(?:benefits?(?: (?:and|&) perks
  + "why join\\b.*|about (?:us|the company)|equal (?:employment )?opportunity(?: employer)?|eeo|"
  + "diversity(?: (?:and|&) inclusion)?|(?:hiring|interview|application) process|how to apply|legal|privacy|"
  + "additional information|notice at collection|(?:recruitment )?fraud (?:disclaimer|alert|notice|warning)|"
- + "shift|hours per week)\\s*:?\\s*$", "i");
+ + "shift|hours per week|"
+ + "المزايا|المميزات|الرواتب والمزايا|كيفية التقديم|طريقة التقديم)\\s*:?\\s*$", "i");
 /* legal/eligibility paragraph OPENERS: work-auth is conventionally the last
    requirement, so truncating from the earliest marker removes the visa/EEO/
    CCPA/fraud tail that follows. */
@@ -716,7 +772,7 @@ function extractDynamicPhrases(jdRaw) {
   const employer = employerTerms(jdRaw);
   const weights = new Map();
   const add = (p, w) => {
-    p = p.toLowerCase().trim().replace(/^[-–•*·\s]+|[.,;:]+$/g, "");
+    p = p.toLowerCase().trim().replace(/^[-–•*·\s]+|[.,;:،؛]+$/g, "");
     if (!phraseOk(p)) return;
     if (CURATED_TOKENS.has(p) || isDoubleCount(p)) return;       // curated already covers it
     if (p.split(/[ /-]+/).some(t => employer.has(t))) return;    // employer name ≠ skill
@@ -729,7 +785,7 @@ function extractDynamicPhrases(jdRaw) {
     // source 1: skill-list lines (>=3 delimiter-separated short items).
     // Colons and parens are also delimiters so "CI/CD pipelines: GitHub Actions"
     // and "load balancing (NGINX)" yield clean per-tool tokens.
-    const items = line.replace(/^[-–•*·]\s*/, "").split(/[,;:()]/).map(s => s.trim()).filter(Boolean);
+    const items = line.replace(/^[-–•*·]\s*/, "").split(/[,;:()،؛]/).map(s => s.trim()).filter(Boolean);
     if (items.length >= 3 && items.every(i => i.split(/\s+/).length <= 4)) {
       // strip leading stopword qualifiers and responsibility verbs:
       // "strong python" -> "python", "Lead market research" -> "market research"
@@ -805,32 +861,46 @@ function keywordScore(jd, resume) {
            miss: [...missCur.map(k => [k, 1]), ...missDyn] };
 }
 
+/* Section-header / label detection is bilingual (EN + AR alternation) so the
+   structure checks work whether the resume is written in English or Arabic —
+   e.g. "الخبرة" (experience), "المهارات" (skills), "التعليم" (education).
+   Checks return translation KEYS, not literal strings, so the UI can render
+   them in whichever language is currently active (see STRUCT_LABELS). */
 function structureScore(resume) {
   const lower = resume.toLowerCase();
   const checks = [
-    ["Contact email present", /[\w.+-]+@[\w-]+\.[a-z]{2,}/i.test(resume)],
-    ["Phone number present", /(\+?\d[\d\s().-]{8,}\d)/.test(resume)],
-    ["Summary / profile section", /\b(summary|profile|objective|about)\b/.test(lower)],
-    ["Skills / competencies section", /\b(skills|competencies|technologies|technical)\b/.test(lower)],
-    ["Experience section", /\b(experience|employment|work history)\b/.test(lower)],
-    ["Education section", /\b(education|degree|university|college|b\.?s\.?|m\.?s\.?)\b/.test(lower)],
-    ["Bullet points used (≥6)", (resume.match(/^\s*[-–•*·]/gm) || []).length >= 6],
-    ["Quantified achievements (numbers/%)", (resume.match(/\d+%|\$\d|\d+x|\b\d{2,}\b/g) || []).length >= 5],
-    ["Reasonable length (150–1400 words)", (w => w >= 150 && w <= 1400)(resume.split(/\s+/).length)],
+    ["contactEmail", /[\w.+-]+@[\w-]+\.[a-z]{2,}/i.test(resume)],
+    ["phone", /(\+?\d[\d\s().-]{8,}\d)/.test(resume)],
+    ["summarySection", /\b(summary|profile|objective|about)\b|ملخص|نبذة/.test(lower)],
+    ["skillsSection", /\b(skills|competencies|technologies|technical)\b|المهارات|الكفاءات|مهارات/.test(lower)],
+    ["experienceSection", /\b(experience|employment|work history)\b|الخبرة|الخبرات|الخبرة العملية/.test(lower)],
+    ["educationSection", /\b(education|degree|university|college|b\.?s\.?|m\.?s\.?)\b|التعليم|المؤهلات|جامعة|الشهادة/.test(lower)],
+    ["bullets", (resume.match(/^\s*[-–•*·]/gm) || []).length >= 6],
+    ["quantified", (resume.match(/\d+%|\$\d|\d+x|\b\d{2,}\b/g) || []).length >= 5],
+    ["length", (w => w >= 150 && w <= 1400)(resume.split(/\s+/).length)],
   ];
   return { score: checks.filter(c => c[1]).length / checks.length, checks };
 }
 
+/* Years-of-experience patterns are bilingual: "5+ years" / "٥+ سنوات خبرة"
+   (Arabic-Indic digits are normalized to Western digits earlier, in
+   analyze(), so \d{1,2} already catches both). "Present"/"current" also has
+   Arabic equivalents (حتى الآن / الآن / حاليًا / الحالي) for date ranges. */
+const YEARS_WORD = "(?:years?|yrs?|سن(?:ة|ه|وات))";
+const PRESENT_WORD = "(?:present|current|حتى\\s+الآن|الآن|حاليًا|حاليا|الحالي)";
 function yearsScore(jd, resume) {
-  const req = [...jd.matchAll(/(\d{1,2})\s*\+?\s*(?:years?|yrs?)/gi)].map(m => +m[1]);
+  const reqRe = new RegExp("(\\d{1,2})\\s*\\+?\\s*" + YEARS_WORD, "gi");
+  const req = [...jd.matchAll(reqRe)].map(m => +m[1]);
   const required = req.length ? Math.max(...req.filter(n => n <= 25), 0) : 0;
 
-  const claimed = [...resume.matchAll(/(\d{1,2})\s*\+?\s*(?:years?|yrs?)/gi)].map(m => +m[1]).filter(n => n <= 40);
-  // also estimate from date ranges like 2018 – 2024 / 2021 – Present
+  const claimed = [...resume.matchAll(reqRe)].map(m => +m[1]).filter(n => n <= 40);
+  // also estimate from date ranges like 2018 – 2024 / 2021 – Present / ٢٠٢١ – حتى الآن
   let est = 0;
   const now = new Date().getFullYear();
-  for (const m of resume.matchAll(/\b(20\d\d|19\d\d)\s*[–-]\s*(present|current|20\d\d|19\d\d)/gi)) {
-    const a = +m[1], b = /present|current/i.test(m[2]) ? now : +m[2];
+  const rangeRe = new RegExp("\\b(20\\d\\d|19\\d\\d)\\s*[–-]\\s*(" + PRESENT_WORD + "|20\\d\\d|19\\d\\d)", "gi");
+  const presentRe = new RegExp("^" + PRESENT_WORD + "$", "i");
+  for (const m of resume.matchAll(rangeRe)) {
+    const a = +m[1], b = presentRe.test(m[2]) ? now : +m[2];
     if (b >= a && b - a <= 45) est += (b - a);
   }
   const have = Math.max(claimed.length ? Math.max(...claimed) : 0, Math.min(est, 40));
@@ -839,6 +909,7 @@ function yearsScore(jd, resume) {
 }
 
 function analyze(jd, resume) {
+  jd = normalizeDigits(jd); resume = normalizeDigits(resume);
   const kw = keywordScore(jd, resume);
   const st = structureScore(resume);
   const yr = yearsScore(jd, resume);
@@ -849,6 +920,131 @@ function analyze(jd, resume) {
 /* =========================== UI wiring ================================ */
 const $ = id => document.getElementById(id);
 let lastResult = null;
+
+/* ===================== i18n (English / Arabic + RTL) =================== */
+const I18N = {
+  en: {
+    tag: "AI resume ↔ job-description fit analyzer · scores locally, coaches with Claude",
+    privacy: "🔒 Your resume never leaves this device*",
+    themeBtn: "◐ Theme", themeTitle: "Toggle theme",
+    jdHeading: "1 · Job description", jdSub: "Paste the posting, or load the built-in sample.",
+    jdPlaceholder: "Paste the job description here…", loadSampleJd: "Load sample JD",
+    uploadLabel: "Upload .txt/.md/.pdf/.docx",
+    rzHeading: "2 · Your resume", rzSub: "Plain text works best (export your resume as .txt or .md).",
+    rzPlaceholder: "Paste your resume here…", loadSampleRz: "Load sample resume",
+    analyzeBtn: "Analyze match",
+    analyzeHint: "Instant, offline, $0 — the deterministic score runs entirely in your browser.",
+    scoreHeading: "Match score",
+    scoreSub: "Weighted: keywords 70% (harmonic mean of curated + JD-specific phrases) · structure 15% · experience 15% · pass ≥ 80%",
+    barKwLbl: "Keyword match (70%)", barStLbl: "Structure (15%)", barYrLbl: "Experience (15%)",
+    haveHeading: "✓ Matched keywords", missHeading: "✗ Missing keywords",
+    structHeading: "Structure checks", yearsHeading: "Experience",
+    aiHeading: "3 · AI coach", aiHeadingSub: "(optional — bring your own Anthropic API key)",
+    aiSub: "The key is used directly from your browser to api.anthropic.com and stored only in this tab (never sent anywhere else). Each run costs fractions of a cent.",
+    apiKeyPh: "sk-ant-…  (Anthropic API key)",
+    modelOpus: "Claude Opus 4.8 (best)", modelHaiku: "Claude Haiku 4.5 (economy)",
+    rememberKey: "remember key (this browser)",
+    tabSummary: "✍️ Rewrite my summary", tabGaps: "🧭 Gap-closing plan", tabCover: "✉️ Cover-letter opener",
+    aiRunBtn: "Run AI feature", aiStopBtn: "Stop",
+    aiOutHint: "AI output streams here — pick a feature and press Run.",
+    footerCostLabel: "Cost model:",
+    footerCost: "static single file (host anywhere free — GitHub Pages, Cloudflare Pages, S3), $0 servers, $0 database, $0 default inference (scoring is deterministic + client-side). AI coach is opt-in BYOK.",
+    footerOffline: "*The deterministic analyzer is fully offline. The optional AI coach sends the JD + resume to Anthropic's API with <i>your</i> key, at your request.",
+    footerBuilt: "Built for the Kanz AI Training Hackathon 2026 · scoring engine derived from an open ~1,900-line Python ATS checker tuned on a 533-JD corpus.",
+    verdictPass: "PASS — strong match", verdictFail: "NEEDS WORK — below 80% ATS bar",
+    haveCount: (n, c, d) => `${n} matched · curated coverage ${c}% · JD-phrase coverage ${d}%`,
+    missCount: n => `${n} missing — weave the genuine ones into your bullets (never fabricate)`,
+    missNone: "Nothing missing — excellent.",
+    struct_contactEmail: "Contact email present", struct_phone: "Phone number present",
+    struct_summarySection: "Summary / profile section", struct_skillsSection: "Skills / competencies section",
+    struct_experienceSection: "Experience section", struct_educationSection: "Education section",
+    struct_bullets: "Bullet points used (≥6)", struct_quantified: "Quantified achievements (numbers/%)",
+    struct_length: "Reasonable length (150–1400 words)",
+    yearsAsks: r => `JD asks for: ${r ? r + "+ years" : "no explicit requirement"}`,
+    yearsShows: h => `Resume shows: ~${h} years (stated or from date ranges)`,
+    extracting: kind => `extracting ${kind}…`,
+    uploadDone: (file, n) => `✓ ${file} (${n} words)`,
+    extractFail: (kind, msg) => `${kind} extraction failed: ${msg}\nTip: export/paste the text version instead.`,
+    noExtractableText: "no extractable text (scanned/image-only PDF?)", noTextFound: "no text found",
+    needBoth: "Paste both a job description and a resume (or load the samples).",
+    aiErrNoKey: "Enter your Anthropic API key (console.anthropic.com → API keys).",
+    aiErrNoJdRz: "Paste a JD and resume first, then Analyze.",
+    aiErrRefusal: "The model declined this request.", aiErrPrefix: "Error: ",
+    aiErrFetchHint: " (check the key, or ad-blockers blocking api.anthropic.com)",
+    featLabel_summary: "resume summary rewrite", featLabel_gaps: "gap-closing plan", featLabel_cover: "cover-letter opener",
+    langBtn: "🌐 العربية",
+  },
+  ar: {
+    tag: "محلل توافق الذكاء الاصطناعي بين السيرة الذاتية والوظيفة · التقييم محلي، والتدريب عبر Claude",
+    privacy: "🔒 سيرتك الذاتية لا تغادر هذا الجهاز أبدًا*",
+    themeBtn: "◐ المظهر", themeTitle: "تبديل المظهر",
+    jdHeading: "١ · الوصف الوظيفي", jdSub: "الصق إعلان الوظيفة، أو حمّل النموذج المدمج.",
+    jdPlaceholder: "الصق الوصف الوظيفي هنا…", loadSampleJd: "تحميل نموذج وظيفة",
+    uploadLabel: "رفع ملف .txt/.md/.pdf/.docx",
+    rzHeading: "٢ · سيرتك الذاتية", rzSub: "النص العادي هو الأفضل (صدّر سيرتك الذاتية بصيغة .txt أو .md).",
+    rzPlaceholder: "الصق سيرتك الذاتية هنا…", loadSampleRz: "تحميل نموذج سيرة ذاتية",
+    analyzeBtn: "تحليل التوافق",
+    analyzeHint: "فوري وبدون إنترنت وبتكلفة صفر — التقييم يعمل بالكامل داخل متصفحك.",
+    scoreHeading: "درجة التوافق",
+    scoreSub: "الترجيح: الكلمات المفتاحية 70% (متوسط توافقي بين القاموس المنسق وعبارات الإعلان الوظيفي) · البنية 15% · الخبرة 15% · النجاح عند ≥ 80%",
+    barKwLbl: "توافق الكلمات المفتاحية (70%)", barStLbl: "البنية (15%)", barYrLbl: "الخبرة (15%)",
+    haveHeading: "✓ الكلمات المتطابقة", missHeading: "✗ الكلمات الناقصة",
+    structHeading: "فحوصات البنية", yearsHeading: "الخبرة",
+    aiHeading: "٣ · مدرّب الذكاء الاصطناعي", aiHeadingSub: "(اختياري — استخدم مفتاح Anthropic API الخاص بك)",
+    aiSub: "يُستخدم المفتاح مباشرة من متصفحك إلى api.anthropic.com ويُحفظ فقط في هذا التبويب (لا يُرسل لأي جهة أخرى). كل تشغيل يكلّف أجزاء من السنت.",
+    apiKeyPh: "sk-ant-…  (مفتاح Anthropic API)",
+    modelOpus: "Claude Opus 4.8 (الأفضل)", modelHaiku: "Claude Haiku 4.5 (اقتصادي)",
+    rememberKey: "تذكّر المفتاح (هذا المتصفح)",
+    tabSummary: "✍️ إعادة صياغة الملخص", tabGaps: "🧭 خطة سد الفجوات", tabCover: "✉️ افتتاحية خطاب التقديم",
+    aiRunBtn: "تشغيل ميزة الذكاء الاصطناعي", aiStopBtn: "إيقاف",
+    aiOutHint: "سيظهر ناتج الذكاء الاصطناعي هنا — اختر ميزة واضغط تشغيل.",
+    footerCostLabel: "نموذج التكلفة:",
+    footerCost: "ملف واحد ثابت (استضفه مجانًا في أي مكان — GitHub Pages أو Cloudflare Pages أو S3)، بدون تكلفة خوادم، بدون قاعدة بيانات، بدون تكلفة استدلال افتراضية (التقييم حتمي ويعمل بالكامل في المتصفح). مدرّب الذكاء الاصطناعي اختياري وبمفتاحك الخاص.",
+    footerOffline: "*المحلل الحتمي يعمل بالكامل دون إنترنت. مدرّب الذكاء الاصطناعي الاختياري يرسل الوصف الوظيفي والسيرة الذاتية إلى واجهة Anthropic API باستخدام مفتاحك <i>الخاص</i>، بناءً على طلبك فقط.",
+    footerBuilt: "بُني لهاكاثون Kanz للتدريب على الذكاء الاصطناعي 2026 · محرك التقييم مشتق من أداة فحص ATS مفتوحة المصدر بلغة بايثون (~1900 سطر) تمت معايرتها على 533 إعلان وظيفي.",
+    verdictPass: "ناجح — توافق قوي", verdictFail: "يحتاج تحسين — أقل من الحد الأدنى 80%",
+    haveCount: (n, c, d) => `${n} متطابقة · التغطية المنسقة ${c}% · تغطية عبارات الإعلان ${d}%`,
+    missCount: n => `${n} ناقصة — أضف الحقيقية منها إلى نقاط سيرتك الذاتية (لا تختلق أبدًا)`,
+    missNone: "لا يوجد نقص — ممتاز.",
+    struct_contactEmail: "بريد إلكتروني للتواصل موجود", struct_phone: "رقم هاتف موجود",
+    struct_summarySection: "قسم الملخص / النبذة", struct_skillsSection: "قسم المهارات / الكفاءات",
+    struct_experienceSection: "قسم الخبرة", struct_educationSection: "قسم التعليم",
+    struct_bullets: "استخدام نقاط تعداد (≥6)", struct_quantified: "إنجازات مُقاسة كميًا (أرقام/نسب)",
+    struct_length: "طول مناسب (150–1400 كلمة)",
+    yearsAsks: r => `يطلب الإعلان: ${r ? r + "+ سنوات" : "لا يوجد شرط صريح"}`,
+    yearsShows: h => `تُظهر السيرة الذاتية: ~${h} سنوات (مذكورة أو محسوبة من الفترات الزمنية)`,
+    extracting: kind => `جارٍ استخراج ${kind}…`,
+    uploadDone: (file, n) => `✓ ${file} (${n} كلمة)`,
+    extractFail: (kind, msg) => `فشل استخراج ${kind}: ${msg}\nنصيحة: صدّر أو الصق النسخة النصية بدلاً من ذلك.`,
+    noExtractableText: "لا يوجد نص قابل للاستخراج (ملف PDF ممسوح ضوئيًا/صورة فقط؟)", noTextFound: "لم يُعثر على نص",
+    needBoth: "الصق كلًا من الوصف الوظيفي والسيرة الذاتية (أو حمّل النماذج).",
+    aiErrNoKey: "أدخل مفتاح Anthropic API الخاص بك (console.anthropic.com ← API keys).",
+    aiErrNoJdRz: "الصق الوصف الوظيفي والسيرة الذاتية أولًا، ثم اضغط تحليل.",
+    aiErrRefusal: "رفض النموذج هذا الطلب.", aiErrPrefix: "خطأ: ",
+    aiErrFetchHint: " (تحقق من المفتاح، أو تأكد أن أداة حظر الإعلانات لا تحجب api.anthropic.com)",
+    featLabel_summary: "إعادة صياغة الملخص", featLabel_gaps: "خطة سد الفجوات", featLabel_cover: "افتتاحية خطاب التقديم",
+    langBtn: "🌐 English",
+  },
+};
+let LANG = localStorage.getItem("kanzmatch_lang") || "en";
+function T(key) { const v = (I18N[LANG] || I18N.en)[key]; return v === undefined ? I18N.en[key] : v; }
+
+function applyI18n() {
+  document.documentElement.lang = LANG;
+  document.documentElement.dir = LANG === "ar" ? "rtl" : "ltr";
+  document.querySelectorAll("[data-i18n]").forEach(el => { el.innerHTML = T(el.dataset.i18n); });
+  document.querySelectorAll("[data-i18n-ph]").forEach(el => { el.placeholder = T(el.dataset.i18nPh); });
+  document.querySelectorAll("[data-i18n-title]").forEach(el => { el.title = T(el.dataset.i18nTitle); });
+  $("aiOut").setAttribute("data-empty-hint", T("aiOutHint"));
+  $("langBtn").textContent = T("langBtn");
+  if (lastResult) renderResults(lastResult);
+}
+$("langBtn").onclick = () => {
+  LANG = LANG === "en" ? "ar" : "en";
+  localStorage.setItem("kanzmatch_lang", LANG);
+  applyI18n();
+};
+applyI18n();
 
 $("themeBtn").onclick = () => {
   const r = document.documentElement;
@@ -1016,20 +1212,20 @@ function hookFile(inputId, taId, statusId) {
     const isDoc = /\.doc$/i.test(f.name) && !isDocx;
     if (isPdf || isDocx || isDoc) {
       const kind = isPdf ? "PDF" : "Word";
-      status.textContent = `extracting ${kind}…`;
+      status.textContent = T("extracting")(kind);
       try {
         const buf = await f.arrayBuffer();
         const text = isPdf ? await extractPdfText(buf) : await extractDocxText(buf);
-        if (!text) throw new Error(isPdf ? "no extractable text (scanned/image-only PDF?)" : "no text found");
+        if (!text) throw new Error(isPdf ? T("noExtractableText") : T("noTextFound"));
         $(taId).value = text;
-        status.textContent = `✓ ${f.name} (${text.split(/\s+/).length} words)`;
+        status.textContent = T("uploadDone")(f.name, text.split(/\s+/).length);
       } catch (err) {
         status.textContent = "";
-        alert(`${kind} extraction failed: ` + err.message + "\nTip: export/paste the text version instead.");
+        alert(T("extractFail")(kind, err.message));
       }
     } else {
       const rd = new FileReader();
-      rd.onload = () => { $(taId).value = rd.result; status.textContent = `✓ ${f.name}`; };
+      rd.onload = () => { $(taId).value = rd.result; status.textContent = T("uploadDone")(f.name, rd.result.split(/\s+/).length); };
       rd.readAsText(f);
     }
     e.target.value = "";   // allow re-selecting the same file
@@ -1099,17 +1295,12 @@ function chipHTML([p, w], cls) {
   return `<span class="chip ${cls}">${cls === "have" ? "✓" : "✗"} ${p}${wTag}</span>`;
 }
 
-$("run").onclick = () => {
-  const jd = $("jd").value.trim(), rz = $("rz").value.trim();
-  if (!jd || !rz) { alert("Paste both a job description and a resume (or load the samples)."); return; }
-  const r = analyze(jd, rz);
-  lastResult = r;
-
+function renderResults(r) {
   $("results").style.display = "block";
   const pct = x => Math.round(x * 100);
   $("scoreNum").textContent = pct(r.total) + "%";
   const pass = r.total >= 0.80;
-  $("scoreVerdict").textContent = pass ? "PASS — strong match" : "NEEDS WORK — below 80% ATS bar";
+  $("scoreVerdict").textContent = T(pass ? "verdictPass" : "verdictFail");
   $("scoreVerdict").className = "verdict " + (pass ? "pass" : "fail");
 
   const setBar = (bar, val, x) => { $(bar).style.width = pct(x) + "%"; $(val).textContent = pct(x) + "%"; };
@@ -1120,18 +1311,22 @@ $("run").onclick = () => {
   const sortW = (a, b) => b[1] - a[1] || a[0].localeCompare(b[0]);
   $("haveChips").innerHTML = r.kw.have.sort(sortW).map(x => chipHTML(x, "have")).join("");
   $("missChips").innerHTML = r.kw.miss.sort(sortW).map(x => chipHTML(x, "miss")).join("");
-  $("haveCount").textContent = `${r.kw.have.length} matched · curated coverage ${pct(r.kw.curatedCov)}% · JD-phrase coverage ${pct(r.kw.dynCov)}%`;
-  $("missCount").textContent = r.kw.miss.length
-    ? `${r.kw.miss.length} missing — weave the genuine ones into your bullets (never fabricate)`
-    : "Nothing missing — excellent.";
+  $("haveCount").textContent = T("haveCount")(r.kw.have.length, pct(r.kw.curatedCov), pct(r.kw.dynCov));
+  $("missCount").textContent = r.kw.miss.length ? T("missCount")(r.kw.miss.length) : T("missNone");
 
-  $("structList").innerHTML = r.st.checks.map(([label, ok]) =>
-    `<li class="${ok ? "ok" : "bad"}">${label}</li>`).join("");
+  $("structList").innerHTML = r.st.checks.map(([key, ok]) =>
+    `<li class="${ok ? "ok" : "bad"}">${T("struct_" + key)}</li>`).join("");
   $("yearsList").innerHTML = [
-    `<li class="${r.yr.required ? "ok" : "ok"}">JD asks for: ${r.yr.required ? r.yr.required + "+ years" : "no explicit requirement"}</li>`,
-    `<li class="${r.yr.have >= r.yr.required ? "ok" : "bad"}">Resume shows: ~${r.yr.have} years (stated or from date ranges)</li>`,
+    `<li class="ok">${T("yearsAsks")(r.yr.required)}</li>`,
+    `<li class="${r.yr.have >= r.yr.required ? "ok" : "bad"}">${T("yearsShows")(r.yr.have)}</li>`,
   ].join("");
+}
 
+$("run").onclick = () => {
+  const jd = $("jd").value.trim(), rz = $("rz").value.trim();
+  if (!jd || !rz) { alert(T("needBoth")); return; }
+  lastResult = analyze(jd, rz);
+  renderResults(lastResult);
   $("results").scrollIntoView({ behavior: "smooth", block: "start" });
 };
 
@@ -1218,8 +1413,8 @@ $("aiRun").onclick = async () => {
   const key = $("apiKey").value.trim();
   const jd = $("jd").value.trim(), rz = $("rz").value.trim();
   $("aiErr").textContent = ""; $("aiCost").textContent = "";
-  if (!key) { $("aiErr").textContent = "Enter your Anthropic API key (console.anthropic.com → API keys)."; return; }
-  if (!jd || !rz) { $("aiErr").textContent = "Paste a JD and resume first, then Analyze."; return; }
+  if (!key) { $("aiErr").textContent = T("aiErrNoKey"); return; }
+  if (!jd || !rz) { $("aiErr").textContent = T("aiErrNoJdRz"); return; }
 
   const missing = lastResult ? lastResult.kw.miss.map(([p]) => p).slice(0, 25).join(", ") : "";
   const feat = FEATURES[activeFeature];
@@ -1273,18 +1468,18 @@ $("aiRun").onclick = async () => {
         }
       }
     }
-    if (stopReason === "refusal") $("aiErr").textContent = "The model declined this request.";
+    if (stopReason === "refusal") $("aiErr").textContent = T("aiErrRefusal");
     const secs = ((performance.now() - t0) / 1000).toFixed(1);
     if (usage) {
       const priceOut = model.includes("haiku") ? 5 : 25;   // $/MTok output
       const cents = (usage.output_tokens * priceOut / 1e6 * 100).toFixed(3);
       $("aiCost").textContent =
-        `${feat.label} · ${model} · ${usage.output_tokens} output tokens · ~${cents}¢ output cost · ${secs}s`;
+        `${T("featLabel_" + activeFeature)} · ${model} · ${usage.output_tokens} output tokens · ~${cents}¢ output cost · ${secs}s`;
     }
   } catch (e) {
     if (e.name !== "AbortError")
-      $("aiErr").textContent = "Error: " + e.message +
-        (String(e.message).includes("Failed to fetch") ? " (check the key, or ad-blockers blocking api.anthropic.com)" : "");
+      $("aiErr").textContent = T("aiErrPrefix") + e.message +
+        (String(e.message).includes("Failed to fetch") ? T("aiErrFetchHint") : "");
   } finally {
     $("aiRun").disabled = false; $("aiStop").style.display = "none";
     aborter = null;

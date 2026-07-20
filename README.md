@@ -5,12 +5,14 @@
 A single-file, zero-cost web app that scores any resume against any job description
 **entirely in the browser** — no server, no signup, no data leaving the device — and
 then (optionally) coaches the candidate with Claude via a bring-your-own-key AI panel
-with three switchable features.
+with three switchable features. Fully bilingual: **English and Arabic, with a real
+RTL layout** (not just mirrored CSS — the scoring engine itself understands Arabic
+JDs and resumes; see §4.3 in RESEARCH.md).
 
 ```
 my-kanz/
 ├── app/
-│   ├── index.html            ← the entire product (HTML + CSS + JS, ~1000 lines)
+│   ├── index.html            ← the entire product (HTML + CSS + JS, ~1500 lines)
 │   └── vendor/               ← pdf.js 3.11.174 (Mozilla, Apache-2.0), vendored for
 │       ├── pdf.min.js           fully-offline PDF parsing; hashes verified against
 │       └── pdf.worker.min.js    the official pdfjs-dist npm package
@@ -38,6 +40,16 @@ make besides that fallback is api.anthropic.com when the user runs the BYOK coac
 
 ## What it does
 
+0. **🌐 language toggle (top-right)** switches the entire UI between English and
+   Arabic — every label, button, hint, error message and the AI coach's tab
+   names — and flips the page to a true `dir="rtl"` layout (score card, chip
+   grids, structure/experience cards all mirror correctly; English tech terms
+   inside Arabic text still render left-to-right). It isn't cosmetic-only: the
+   scoring engine is Arabic-aware — a JD or resume written in Arabic is scored
+   with Arabic section-header detection, Arabic years-of-experience phrasing,
+   Arabic-Indic digit normalization, and curated Arabic aliases for common
+   practice/domain terms (tool and product names stay in Latin script, matching
+   real Gulf tech-hiring code-switching conventions). See RESEARCH.md §4.3.
 1. **Paste a job description + your resume** (or press the two *Load sample*
    buttons). Both panes also accept **.txt/.md/.pdf/.docx uploads**, all parsed
    client-side and fully offline: PDFs via the vendored pdf.js (lazy-loaded from
