@@ -58,7 +58,7 @@ make besides that fallback is api.anthropic.com when the user runs the BYOK coac
    File bytes never leave the browser and are never stored.
 2. **Analyze match** → instant deterministic ATS-style score:
    - **Keywords 70%** — confidence-ramped harmonic mean of (a) coverage of a
-     curated 144-term SRE/DevOps/cloud skill dictionary with aliases
+     curated 181-term SRE/DevOps/cloud skill dictionary with aliases
      (`k8s`→kubernetes, `golang`→go, …) and (b) coverage of phrases mined
      dynamically from *this* JD (skill-list lines, punctuated tech tokens like
      `node.js`/`ci/cd`, Title-Cased proper nouns down-weighted ×0.5); below 4
@@ -66,13 +66,15 @@ make besides that fallback is api.anthropic.com when the user runs the BYOK coac
      curated score, so a tiny noisy sample can't zero out a strong curated
      match. Before mining, JD
      boilerplate is excised by closed-set/structural rules ported from the
-     565-JD-validated Python engine — company-intro blocks, perk lists, HR
+     673-JD-validated Python engine — company-intro blocks, perk lists, HR
      competency taxonomies, legal/EEO/visa/fraud tails, "At \<Co\>, we…"
      pitch, HEADERLESS pitch caught by grammar alone (lines opening
      "We're/We've/Our…" or "\<Brand\> provides/is backed/was founded…"),
-     posting metadata, countries/time-zones, and the employer's own name — so
-     benefits and marketing words never tank the score, for technical **and**
-     non-technical JDs alike (see RESEARCH.md §2.2).
+     posting metadata, countries/continents/time-zones (incl. weekday/month
+     abbreviations and hybrid-schedule anchor days like "Mon/Tue/Wed"), and
+     the employer's own name — so benefits and marketing words never tank the
+     score, for technical **and** non-technical JDs alike (see RESEARCH.md
+     §2.2).
    - **Structure 15%** — 9 checks: contact info, sections, bullets, quantified
      achievements, length.
    - **Experience 15%** — years required (JD regex) vs years shown (stated
@@ -105,7 +107,7 @@ a server we operate (there isn't one).
 
 ## Provenance
 
-The scoring architecture is a JavaScript port of a ~1,900-line open Python ATS
-checker (`ats_checking.py`) that was empirically tuned against a corpus of 533
+The scoring architecture is a JavaScript port of a ~2,300-line open Python ATS
+checker (`ats_checking.py`) that was empirically tuned against a corpus of 673
 real job descriptions via document-frequency noise analysis. See **RESEARCH.md**
 for the derivation, the validation runs, and every design decision with evidence.

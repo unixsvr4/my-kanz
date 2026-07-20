@@ -43,9 +43,9 @@ with LLM coaching as an *opt-in* precision layer. This simultaneously satisfies:
 ### 1.3 Algorithm provenance
 
 The scoring model is **not invented for the hackathon** — it is a JS port of
-`~/myclaude/my-resumes/ats_checking.py` (1,887 lines), a Python ATS checker whose
+`~/myclaude/my-resumes/ats_checking.py` (2,280 lines), a Python ATS checker whose
 keyword dictionary, stopword lists, and noise filters were tuned against a corpus
-of **533 real job descriptions** using document-frequency analysis
+of **673 real job descriptions** using document-frequency analysis
 (`jd_noise_audit.py`: a phrase recurring across dozens of unrelated postings is
 boilerplate, not a company-specific skill). Porting a corpus-tuned engine gives
 the hackathon app empirically-grounded behavior a weekend-built heuristic would lack.
@@ -63,7 +63,7 @@ S(J,R) = 0.70·K(J,R) + 0.15·T(R) + 0.15·Y(J,R)        pass ⇔ S ≥ 0.80
 ```
 
 Weights inherited unchanged from the Python engine (`ats_checking.py:1752-1754`),
-where they were validated across the 533-JD corpus. Keywords dominate because
+where they were validated across the 673-JD corpus. Keywords dominate because
 keyword filtering is what real ATS software actually does first; structure and
 years are secondary gates.
 
@@ -83,7 +83,7 @@ scores 30%" bug: a JD whose skills are all curated leaves the dynamic miner
 mean — and the whole keyword score — to ~0. Below `DYN_RELIABLE_N` weighted
 phrases the dynamic signal blends back toward the curated score.
 
-- **Curated dictionary**: 144 canonical skills across 12 categories (cloud,
+- **Curated dictionary**: 181 canonical skills across 12 categories (cloud,
   containers, CI/CD, IaC, observability, SRE practice, languages, data,
   OS/networking, security, AI/ML-ops, delivery), each with alias lists
   (`k8s → kubernetes`, `golang → go`, `postgres → postgresql`). Matching uses a
@@ -98,7 +98,7 @@ phrases the dynamic signal blends back toward the curated score.
      excluded, gerunds excluded — weight **0.5** (`PROPER_NOUN_WEIGHT`), so
      unknown company/product names cannot dominate the denominator.
 - **JD boilerplate excision** (`prepJD`, ported from the Python engine where it
-  was validated on a 563-JD corpus). The dynamic score is `matched/extracted`,
+  was validated on a 673-JD corpus). The dynamic score is `matched/extracted`,
   so every boilerplate phrase that survives extraction and isn't in the resume
   silently tanks a genuinely strong match. Every rule is **closed-set or
   structural** — it matches a boilerplate *family* by shape, never per-company
@@ -134,8 +134,10 @@ phrases the dynamic signal blends back toward the curated score.
   7. the employer's own name — captured with zero configuration from its EEO
      self-reference, corporate self-intro ("X is a global company…"), or "At X,
      we…" pitch — is never counted as a skill.
-- **Phrase-level noise rejection**: gazetteers (US states, countries, world
-  cities, calendar and time-zone words, compass directions, spelled-out
+- **Phrase-level noise rejection**: gazetteers (US states, countries,
+  continents/world-regions, world cities, calendar and time-zone words —
+  including weekday/month abbreviations and slash-joined anchor-day schedules
+  like "Mon/Tue/Wed" — compass directions, spelled-out
   numbers — never skills in any
   profession), HR-taxonomy soft skills ("stakeholder management", "growth
   mindset" — every candidate claims them, scoring them is meaningless),
@@ -238,10 +240,51 @@ analogous legal-boilerplate filter).
   the dynamic extractor alone (harmonic mean degrades gracefully — `C` treats an
   empty curated set as coverage 1, so `K → D`).
 - Two hand-built samples ≠ a corpus. The Python parent was corpus-validated; the
-  port inherits its architecture but a JS-side re-validation against the 533-JD
+  port inherits its architecture but a JS-side re-validation against the 673-JD
   corpus is future work (§6).
 - Keyword presence ≠ competence; the tool measures *screening survivability*,
   which is what it claims to measure.
+
+### 3.4 2026-07-20 sync: porting the Python engine's 673-JD noise-audit round
+
+The Python parent re-ran its own document-frequency noise audit after its JD
+corpus grew past 672 real postings, and this port pulled the resulting fixes
+across so the two engines don't drift:
+
+- **Calendar gazetteer completed**: `TIME_WORDS` only matched exact weekday/
+  month spellings, missing plurals ("Thursdays" from hybrid-schedule bullets:
+  "Tuesdays and Thursdays are our anchor days") and abbreviations ("Aug",
+  "Mon/Tue/Wed"). Also fixed a JS-specific gap the Python source doesn't share:
+  `phraseOk`'s calendar/compass check only fired for single-token phrases
+  (`parts.length === 1`), so a slash-joined compound like `Mon/Tue/Wed` or
+  `East/West` — which JS's tokenizer already flattens into multiple `parts` at
+  the same step, unlike the Python port's separate whitespace/punctuation
+  split — walked straight through. Fixed by checking `parts.every(...)`
+  unconditionally instead of gating on phrase length.
+- **New `CONTINENTS` gazetteer** (Europe, Asia, APAC, EMEA, Americas…), the
+  same one-level-up companion to `COUNTRIES` the Python engine added.
+- **`pre-tax` benefits leak** (commuter/FSA/retirement lines) closed in
+  `BENEFITS_LINE`.
+- **`must-haves`/`nice-to-haves`/`life balance`/`early-stage`/`successful`**
+  joined `SOFT_SKILLS` (this port's stand-in for the Python `NOISE_PHRASES`
+  set — SOFT_SKILLS is checked against the whole phrase, not just per-word).
+- **Curated dictionary grew 145 → 181 canonicals** with a representative
+  (not exhaustive — see below) slice of the ~55 real tools the Python audit
+  surfaced: ServiceNow, Podman, Docker Swarm, bare-metal, Kyverno, Atlantis,
+  Bicep/ARM templates, Sentry, AppDynamics, Grafana Tempo, VictoriaMetrics,
+  MTTR/MTTD, Kinesis, ElastiCache, message queue, OpenTSDB, ETL, BGP, Cilium,
+  VLAN, Okta, PKI, CIS Benchmarks, SCA, SOAR, XDR, SOX, FISMA, CKS, CSPM,
+  GuardDuty, GovCloud, MCP, and RAG.
+
+This was a **deliberate partial port, not full parity**: the Python engine's
+332 canonicals include many terms (Slurm/HPC schedulers, Oracle-stack
+specifics, several AI-observability niche tools) that don't fit this app's
+tighter, bilingual-first, hackathon-scoped dictionary. The noise-reduction
+*mechanisms* (gazetteers, benefits/boilerplate stripping, the confidence-ramp
+doctrine) were ported in full; the curated *vocabulary* was ported selectively
+by relevance to this app's SRE/DevOps/cloud scope. Re-run §3's validation
+command after any future sync to confirm the sample-JD score and residual
+"missing" list stay sane.
 
 ---
 
@@ -409,7 +452,7 @@ independent of the current UI language.
   Arabic section headers (`عن الشركة`, `المسؤوليات`, `المتطلبات`, `المزايا`)
   in the existing `INTRO_HEADINGS`/`JOB_CONTENT`/`TAIL_HEADINGS` alternations.
   This is **not** claimed to be corpus-validated the way the English stripper
-  is (§2.2 was tuned against 533 real JDs); it is a reasonable first pass,
+  is (§2.2 was tuned against 673 real JDs); it is a reasonable first pass,
   documented here as a known limitation rather than overclaimed.
 - **Deliberately out of scope**: no Arabic proper-noun mining (source 3 of
   `extractDynamicPhrases` relies on Title-Case, which doesn't exist in
@@ -469,7 +512,7 @@ moves is the user's own opt-in API spend, displayed per-run in the UI.
 - Repo layout: see README. `app/index.html` is authoritative; there is no build.
 - Re-run validation: §3 command. Manual E2E: `python3 -m http.server -d app 8000`,
   load samples, Analyze, then exercise the three AI tabs with a real key.
-- Future work: (a) re-validate the JS port against the full 533-JD corpus and
+- Future work: (a) re-validate the JS port against the full 673-JD corpus and
   report per-JD score deltas vs the Python engine; (b) ~~client-side PDF text
   extraction~~ — **shipped** (§4.1); next step is OCR fallback for scanned PDFs;
   (c) ~~Arabic-language JD support (Kanz's home market)~~ — **shipped** (§4.3,

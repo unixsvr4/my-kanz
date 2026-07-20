@@ -321,8 +321,9 @@ const KEYWORD_DB = {
     "route 53": ["route 53", "route53"], "dynamodb": ["dynamodb"],
     "multi-region": ["multi-region", "multi region"], "serverless": ["serverless"],
     "hybrid cloud": ["hybrid cloud"], "multi-cloud": ["multi-cloud", "multi cloud"],
-    "oci": ["oci", "oracle cloud"],
+    "oci": ["oci", "oracle cloud", "oracle cloud infrastructure"],
     "cloud computing": ["cloud computing", "الحوسبة السحابية"],
+    "guardduty": ["guardduty", "aws guardduty"], "govcloud": ["govcloud", "aws govcloud"],
   },
   "Containers & Orchestration": {
     "kubernetes": ["kubernetes", "k8s", "container orchestration", "orchestration"],
@@ -330,6 +331,8 @@ const KEYWORD_DB = {
     "helm": ["helm"], "istio": ["istio", "service mesh"], "argocd": ["argocd", "argo cd"],
     "karpenter": ["karpenter"], "autoscaling": ["autoscaling", "auto-scaling", "auto scaling", "hpa"],
     "kustomize": ["kustomize"], "containerd": ["containerd"],
+    "podman": ["podman"], "docker swarm": ["docker swarm"], "bare metal": ["bare metal", "bare-metal"],
+    "kyverno": ["kyverno"],
   },
   "CI/CD & Automation": {
     "ci/cd": ["ci/cd", "cicd", "ci-cd", "continuous integration", "continuous delivery", "continuous deployment",
@@ -342,6 +345,9 @@ const KEYWORD_DB = {
     "terraform": ["terraform"], "terragrunt": ["terragrunt"], "ansible": ["ansible"], "cloudformation": ["cloudformation"],
     "iac": ["iac", "infrastructure as code", "infrastructure-as-code"], "pulumi": ["pulumi"],
     "packer": ["packer"], "puppet": ["puppet"], "chef": ["chef"],
+    "atlantis": ["atlantis"], "bicep": ["bicep", "azure bicep"],
+    "arm templates": ["arm templates", "azure resource manager"],
+    "configuration management": ["configuration management"],
   },
   "Observability": {
     "prometheus": ["prometheus"], "grafana": ["grafana"], "datadog": ["datadog"],
@@ -352,7 +358,9 @@ const KEYWORD_DB = {
     "dashboards": ["dashboard", "dashboards"],
     "opentelemetry": ["opentelemetry", "otel"], "tracing": ["tracing", "distributed tracing"],
     "new relic": ["new relic", "newrelic"], "nagios": ["nagios"], "slo": ["slo", "slos", "service level objective"],
-    "sli": ["sli", "slis"], "sla": ["sla", "slas"],
+    "sli": ["sli", "slis"], "sla": ["sla", "slas"], "mttr": ["mttr", "mtbf", "mttd"],
+    "sentry": ["sentry"], "appdynamics": ["appdynamics", "app dynamics"], "tempo": ["tempo", "grafana tempo"],
+    "victoriametrics": ["victoriametrics", "victoria metrics"],
   },
   "SRE Practices": {
     "sre": ["sre", "site reliability"], "incident response": ["incident response", "incident management", "الاستجابة للحوادث"],
@@ -374,6 +382,8 @@ const KEYWORD_DB = {
     "airflow": ["airflow"], "spark": ["spark"], "cassandra": ["cassandra"],
     "snowflake": ["snowflake"], "data lake": ["data lake", "data lakes", "lakehouse"],
     "redshift": ["redshift", "amazon redshift"], "analytics": ["analytics", "data analytics"],
+    "kinesis": ["kinesis", "amazon kinesis"], "elasticache": ["elasticache", "amazon elasticache"],
+    "message queue": ["message queue", "message queues"], "opentsdb": ["opentsdb"], "etl": ["etl"],
   },
   "OS & Networking": {
     "linux": ["linux", "unix", "rhel", "ubuntu", "centos"],
@@ -382,7 +392,7 @@ const KEYWORD_DB = {
     "dns": ["dns"], "tcp/ip": ["tcp/ip", "tcp"], "http": ["http", "https"],
     "load balancing": ["load balancing", "load balancer", "load balancers", "nginx", "haproxy"],
     "vpn": ["vpn", "الشبكة الافتراضية الخاصة"], "firewall": ["firewall", "firewalls", "fw", "جدار الحماية"],
-    "windows": ["windows server", "windows"],
+    "windows": ["windows server", "windows"], "bgp": ["bgp"], "cilium": ["cilium"], "vlan": ["vlan", "vlans"],
   },
   "Security & Compliance": {
     "security": ["security", "devsecops", "الأمن", "الأمن السيبراني"], "encryption": ["encryption", "tls", "ssl", "التشفير"],
@@ -392,12 +402,17 @@ const KEYWORD_DB = {
     "authentication": ["authentication", "oauth", "sso", "saml", "المصادقة"], "audit": ["audit", "auditing", "التدقيق"],
     "waf": ["waf", "web application firewall"], "selinux": ["selinux"],
     "ids/ips": ["ids/ips", "ips/ids", "intrusion detection", "intrusion prevention"],
+    "okta": ["okta"], "pki": ["pki", "public key infrastructure"],
+    "cis": ["cis", "cis benchmarks"], "sca": ["sca", "software composition analysis"],
+    "soar": ["soar"], "xdr": ["xdr"], "sox": ["sox", "sarbanes-oxley"], "fisma": ["fisma"],
+    "cks": ["cks"], "cspm": ["cspm"],
   },
   "AI/ML Ops": {
     "mlops": ["mlops", "ml ops"], "llm": ["llm", "llms", "large language model", "نماذج اللغة الكبيرة"],
     "gpu": ["gpu", "gpus", "cuda"], "ai": ["ai", "artificial intelligence", "genai", "generative ai", "الذكاء الاصطناعي"],
     "machine learning": ["machine learning", "ml", "تعلم الآلة", "التعلم الآلي"], "inference": ["inference"],
-    "ai coding assistant": ["github copilot", "copilot", "cursor", "claude code", "codeium"],
+    "ai coding assistant": ["github copilot", "copilot", "cursor", "claude code", "claude", "codeium", "kiro"],
+    "mcp": ["mcp", "model context protocol"], "rag": ["rag", "retrieval augmented generation", "retrieval-augmented"],
   },
   "Delivery & Collaboration": {
     "agile": ["agile", "scrum", "kanban"], "jira": ["jira"], "confluence": ["confluence"],
@@ -408,6 +423,7 @@ const KEYWORD_DB = {
     "migration": ["migration", "migrations", "migrate", "الترحيل"], "microservices": ["microservices", "micro-services", "الخدمات المصغرة"],
     "api": ["api", "apis", "rest", "restful", "grpc"],
     "troubleshooting": ["troubleshooting", "troubleshoot", "debugging", "debug", "استكشاف الأخطاء وإصلاحها"],
+    "servicenow": ["servicenow", "service now"],
   },
 };
 
@@ -480,8 +496,12 @@ const CITY_NOISE = new Set(("nyc la sf brooklyn manhattan queens tribeca soho mi
  "los angeles","palo alto","mountain view","menlo park","santa monica","jersey city","salt lake city","las vegas",
  "santa clara","el segundo","san mateo","redwood city","white plains","ann arbor","tel aviv","mexico city",
  "buenos aires","sao paulo","hong kong","kuala lumpur"]));
-const TIME_WORDS = new Set(("monday tuesday wednesday thursday friday saturday sunday january february march april "
- + "may june july august september october november december summer winter autumn fall weekday weekdays weekend "
+const TIME_WORDS = new Set(("monday tuesday wednesday thursday friday saturday sunday "
+ + "mondays tuesdays wednesdays thursdays fridays saturdays sundays "
+ + "mon tue tues wed thu thur thurs fri sat sun "
+ + "january february march april may june july august september october november "
+ + "december jan feb mar apr jun jul aug sep sept oct nov dec "
+ + "summer winter autumn fall weekday weekdays weekend "
  + "weekends quarterly annually pacific mountain central eastern timezone timezones").split(" "));
 const COMPASS = new Set(["north","south","east","west","northeast","northwest","southeast","southwest","midwest"]);
 /* a country name is never a skill — office-location / global-team prose
@@ -493,6 +513,11 @@ const COUNTRIES = new Set(("usa america canada mexico brazil argentina colombia 
  + "bangladesh nepal china japan taiwan vietnam thailand philippines indonesia malaysia australia").split(" ")
  .concat(["united states","united kingdom","new zealand","south africa","south korea","sri lanka",
  "costa rica","saudi arabia","united arab emirates"]));
+/* a continent / world-region name is never a skill either — the same
+   office-footprint prose one level up ("R&D hubs across Europe, North
+   America, Asia"). Closed set, same reasoning as COUNTRIES/US_STATES. */
+const CONTINENTS = new Set(["europe","asia","africa","oceania","antarctica","americas","emea","apac",
+ "north america","south america","latin america","middle east"]);
 const NUMBER_WORDS = new Set(("two three four five six seven eight nine ten eleven twelve twenty thirty forty fifty "
  + "hundred thousand million billion").split(" "));
 
@@ -507,7 +532,10 @@ const SOFT_SKILLS = new Set(["communication","communication skills","verbal comm
  "first mindset","interpersonal skills","organizational skills","organization","self-starter","self starter",
  "can-do attitude","positive attitude","multitasking","decision making","decision-making","emotional intelligence",
  "prioritization","initiative","curiosity","resilience","professionalism","active listening","agile practices",
- "solution delivery process","risk management","data management","strategic thinking","relationship building"]);
+ "solution delivery process","risk management","data management","strategic thinking","relationship building",
+ // job-posting boilerplate phrases (not skills, but recur enough across JDs
+ // to earn a fixed spot next to the soft-skill noise they sit alongside)
+ "must-haves","nice-to-haves","life balance","early-stage","early stage","successful"]);
 ["مهارات التواصل","التواصل","العمل الجماعي","روح الفريق","العمل ضمن فريق","القيادة","حل المشكلات",
  "إدارة الوقت","الاهتمام بالتفاصيل","التفكير النقدي","المرونة","الإبداع","الدافعية","الالتزام",
  "الأمانة","العمل تحت الضغط","التعامل مع ضغط العمل","بناء العلاقات","التفكير الاستراتيجي",
@@ -634,7 +662,7 @@ const BRAND_PITCH = new RegExp("^[A-Z][\\w&.'’-]*(?:\\s+[A-Z][\\w&.'’-]*){0,
 const METADATA_LINE = new RegExp("^(?:job title|location|reports? to|department|employment type|job type|"
  + "schedule|travel|work location|seniority level|team|duration|contract length|start date|job id|"
  + "requisition|posted|date posted)\\s*[:\\-]", "i");
-const BENEFITS_LINE = new RegExp("\\b(401\\s?\\(?k\\)?|dental|vision insurance|health insurance|life insurance|"
+const BENEFITS_LINE = new RegExp("\\b(401\\s?\\(?k\\)?|pre[\\s-]?tax|dental|vision insurance|health insurance|life insurance|"
  + "pet insurance|disability insurance|(unlimited|flexible|generous) (pto|paid time off|vacation)|paid time off|"
  + "pto|sick (time|leave)|parental leave|maternity|paternity|baby bonding|tuition|"
  + "wellness (stipend|allowance|program)|gym membership|commuter benefits?|hsa|fsa|espp|stock options?|"
@@ -738,7 +766,7 @@ function phraseOk(p) {
   if (p.length < 2 || p.length > 40) return false;
   if (/^\d[\d,.$%kK+]*$/.test(p)) return false;                 // pure numbers / comp
   if (STOPWORDS.has(p)) return false;                            // whole-phrase stopword (e.g, etc)
-  if (US_STATES.has(p) || COUNTRIES.has(p) || CITY_NOISE.has(p)) return false; // places are never skills
+  if (US_STATES.has(p) || COUNTRIES.has(p) || CONTINENTS.has(p) || CITY_NOISE.has(p)) return false; // places are never skills
   if (SOFT_SKILLS.has(p)) return false;                          // HR-taxonomy soft skills
   if (STREET_RE.test(p)) return false;                           // office addresses
   if (CONJ_COMPOUND.test(p) || HYPHEN_ADJ.test(p)) return false; // grammar, not tools
@@ -748,7 +776,13 @@ function phraseOk(p) {
   // ("expert-level experience with kubernetes", "security knowledge") — the
   // real skill inside it is caught separately by the curated pass
   if (parts.some(w => STOPWORDS.has(w))) return false;
-  if (parts.length === 1 && (NUMBER_WORDS.has(p) || TIME_WORDS.has(p) || COMPASS.has(p))) return false;
+  if (parts.length === 1 && NUMBER_WORDS.has(p)) return false;
+  // calendar words / compass directions are never skills, whether standalone
+  // ("Thursdays") or slash-joined ("Mon/Tue/Wed" anchor days, "East/West
+  // coast") — `parts` already flattens both space- and slash-separated
+  // tokens, so this one check (unlike NUMBER_WORDS, which never compounds)
+  // covers both shapes.
+  if (parts.every(w => TIME_WORDS.has(w)) || parts.every(w => COMPASS.has(w))) return false;
   // a phrase that IS just a responsibility verb ("Pursue action items…" after
   // a mid-line sentence break) is never a skill; verb-named tools (Go, Make,
   // Compose) are deliberately absent from RESP_VERBS
