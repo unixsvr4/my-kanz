@@ -16,11 +16,41 @@ third-party demos, no bare links.
 ## Recording setup (macOS)
 
 ```bash
-python3 -m http.server -d app 8000     # serve the app at http://localhost:8000
-# Record: QuickTime → File → New Screen Recording, 16:9 browser window, mic on.
-# Keep the browser at 100% zoom; hide bookmarks bar; use a clean profile.
-# If the file exceeds 200 MB: ffmpeg -i raw.mov -vcodec h264 -crf 23 demo.mp4
+screenshots/scripts/00_start_server.sh   # serve the app at http://localhost:8000
+screenshots/scripts/01_open_app.sh       # opens it in your default browser
 ```
+
+Keep the browser at 100% zoom; hide the bookmarks bar; use a clean profile
+(no unrelated tabs visible).
+
+**Recording with QuickTime Player — do this every time, in order:**
+
+1. `File → New Screen Recording` (don't hit record yet — this only opens the
+   control bar).
+2. Click the small **˅ arrow** next to the red record button → under
+   **Microphone**, pick your actual mic. It defaults to **None**, which
+   records with no audio and can't be fixed afterward — this is the #1
+   silent-video mistake. Also confirm **System Settings → Privacy & Security
+   → Microphone** has QuickTime Player enabled; if it's off there, the
+   dropdown pick is silently ignored.
+3. Click-drag to select just the browser window (not the full screen) so the
+   framing stays tight on the app, then click **Start Recording**.
+4. Talk through the script below in one take.
+5. **Stop**: click the stop icon in the menu bar (near the clock/Wi-Fi
+   icons), or ⌘+Ctrl+Esc, or switch to QuickTime Player and use its stop
+   control.
+6. QuickTime opens the recording in a player window automatically. Save it:
+   `File → Save` (⌘S) → name it (e.g. `kanz_demo_raw.mov`) and save into
+   `my-kanz/`. This is a `.mov`, not the `.mp4` the submission wants.
+7. Convert to MP4 (also compresses — a raw `.mov` can be large):
+   ```bash
+   ffmpeg -i kanz_demo_raw.mov -vcodec h264 -acodec aac -crf 23 demo.mp4
+   ```
+   Check the size is under 200 MB: `ls -lh demo.mp4`. If it's still too big,
+   lower quality further with a higher `-crf` (e.g. `28`).
+8. When you're fully done recording (including any re-takes):
+   `screenshots/scripts/99_stop_server.sh` — otherwise the next
+   `http.server` run fails with "Address already in use".
 
 Have ready before recording: samples load with one click (built-in); your
 Anthropic API key on the clipboard; rehearse the language-toggle click once so
