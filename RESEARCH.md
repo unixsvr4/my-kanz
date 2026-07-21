@@ -286,6 +286,38 @@ by relevance to this app's SRE/DevOps/cloud scope. Re-run §3's validation
 command after any future sync to confirm the sample-JD score and residual
 "missing" list stay sane.
 
+### 3.5 2026-07-21 sync: hyphenated compliance/safety adjectives no longer count as missing skills
+
+A real-world JD (Fabric Health, Senior SRE) exposed a false-negative gap in
+`HYPHEN_ADJ`, the closed-set regex that drops descriptive hyphenated
+adjectives ("rock-solid", "vm-hosted") from the dynamic-phrase pool so they
+aren't scored as missing tool names. Its suffix list didn't yet include
+`critical`, `prone`, `compliant`, or `safety`, so JD phrasing like
+"HIPAA-compliant architecture", "safety-critical environments", and
+"error-prone procedures" — pure prose, not tool names — was flagged as a
+missing skill even when the underlying real term (HIPAA) was already matched
+via the plain curated-keyword check. The `[a-z]+-` prefix was also too
+strict to admit alphanumeric prefixes like `soc2-compliant`, so it's now
+`[a-z0-9]+-`. Ported directly from the same-day fix in the Python parent
+(`ats_checking.py`'s `_HYPHEN_ADJ_RE`), which found the same gap against its
+own 688-JD corpus and confirmed it with a zero-regression full-corpus
+regression run (score: 33.9% → 94.2% on the triggering JD, 1 legitimate
+FAIL→PASS flip, 0 illegitimate flips). Verified in this port via a
+standalone Node smoke test against `HYPHEN_ADJ` (all seven adjective
+compounds now rejected; `ci-cd`/`scikit-learn`/`node-js`/`k8s` still pass
+through untouched) and an end-to-end `analyze()` run on a synthetic
+Fabric-shaped JD/resume pair scoring 90.8%.
+
+Note: the *other* half of the Python fix — a JD "Recruitment Fraud Alert:
+Protect Yourself" header leaking its scam-warning block into phrase mining
+because the header-matching regex required an exact end-of-line match —
+turned out to be a Python-only bug. This port's `LEGAL_MARKERS` already
+truncates on an unanchored `recruitment fraud` substring match (§2.2), so a
+trailing subtitle after the header never breaks it here; confirmed via the
+same Node smoke test with the verbatim triggering JD text (all scam-block
+phrases — `fabrichealth.com`, `gem.com`, `google meet`, `sms`, "verify the
+domain", "authorized" — stripped correctly, no code change needed).
+
 ---
 
 ## 4. AI layer — engineering decisions

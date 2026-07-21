@@ -545,10 +545,14 @@ const SOFT_SKILLS = new Set(["communication","communication skills","verbal comm
    (rock-solid, people-centered, fast-paced, no-fee) and conjunction infixes
    (drag-and-drop). Real hyphenated tech (ci-cd, scikit-learn) doesn't end in
    these adjective suffixes. */
-const HYPHEN_ADJ = new RegExp("^(?:non|anti|semi|no|co)-[a-z0-9]+$|^[a-z]+-(?:based|focused|driven|facing|friendly|"
+const HYPHEN_ADJ = new RegExp("^(?:non|anti|semi|no|co)-[a-z0-9]+$|^[a-z0-9]+-(?:based|focused|driven|facing|friendly|"
  + "aligned|supported|enabled|managed|aware|ready|first|only|free|approved|specific|related|oriented|native|led|"
  + "owned|backed|market|equity|tier|grade|class|level|scale|speed|time|paced|profile|leading|world|powered|new|"
- + "performing|centric|centered|solid|size|sized|side|agnostic|defined|adjacent)$");
+ + "performing|centric|centered|solid|size|sized|side|agnostic|defined|adjacent|hosted|dollar|critical|prone|"
+ // hipaa-compliant, soc2-compliant, mission-critical, error-prone, clinical-safety:
+ // descriptive adjective compounds, never tool/skill names (a real curated term
+ // riding the prefix, e.g. "hipaa", is still credited via the plain keyword match).
+ + "compliant|safety)$");
 const CONJ_COMPOUND = /-(?:and|or|n)-/;
 const STREET_RE = /\b(?:blvd|boulevard|avenue|suite|ste|pkwy|hwy|plaza|floor)\b/;
 
