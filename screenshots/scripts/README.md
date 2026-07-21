@@ -14,7 +14,17 @@ cd screenshots/scripts
 ./01_capture_app_shots.sh           # 01_samples_loaded, 02_score_screen, 03_dark_mode
 ./02_capture_terminal_shot.sh       # 04_validation_terminal (needs Pillow: pip install pillow)
 ./03_capture_i18n_shots.sh          # 05_arabic_rtl, 06_arabic_ai_panel
+./99_stop_server.sh                 # done? shut it down so the port is free next time
 ```
+
+`00_start_server.sh` is also the right way to serve the app for the demo-video
+recording (see `../../VIDEO_SCRIPT.md`) — it kills any stale instance on the
+same port before starting, so it's safe to re-run. When the recording's done,
+run `99_stop_server.sh` (or pass a port: `99_stop_server.sh 8000`) instead of
+leaving the server running in a background terminal — that's what causes the
+next `python3 -m http.server` to fail with `OSError: [Errno 48] Address
+already in use`. `99_stop_server.sh` is a no-op if nothing's listening, so
+it's always safe to run.
 
 First run on a new machine: open `01_capture_app_shots.sh` and uncomment
 `safari_enable_js_automation` — Safari blocks `do JavaScript` from Apple
@@ -28,6 +38,7 @@ Safari. One-time only.
 |---|---|
 | `lib.sh` | Shared Safari/iTerm2 automation functions, sourced by the numbered scripts |
 | `00_start_server.sh` | Starts (or restarts) the local static server |
+| `99_stop_server.sh` | Stops it (matches by launch pattern, falls back to whatever holds the port) |
 | `01_capture_app_shots.sh` | Light-mode samples, score screen, dark mode |
 | `02_capture_terminal_shot.sh` | Runs the RESEARCH.md §3 validation command in a clean iTerm window and screenshots it |
 | `run_validation.py` | The actual validation logic (extracts the JS scoring core from `index.html`, runs it in Node) — also just useful on its own, independent of screenshots |

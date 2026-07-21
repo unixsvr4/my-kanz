@@ -30,6 +30,9 @@ No build, no install:
 open app/index.html            # macOS — double-click works too
 # or serve it (identical behavior):
 python3 -m http.server -d app 8000   # → http://localhost:8000
+# then, when done, stop it (or the next run fails with "Address already in use"):
+#   Ctrl-C if it's in the foreground, or:
+screenshots/scripts/99_stop_server.sh    # kills whatever's on port 8000, safe to re-run
 ```
 
 Deploy for $0: push the `app/` folder to GitHub Pages, Cloudflare Pages, Netlify, or
