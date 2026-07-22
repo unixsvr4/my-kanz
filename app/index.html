@@ -441,6 +441,7 @@ const STOPWORDS = new Set(("a an and or of to in for with on at by the is are wa
  + "environment environments solutions services systems system tools tooling technologies technology platform "
  + "platforms best practices practice new like well good great e.g eg i.e ie us must-have nice-to-have "
  + "day day-to-day every deep code cost scale internals stack workflows rotations pipelines expertise defining "
+ + "hour hours "
  + "inc llc ltd corp gmbh co "
  // job-title & generic-aptitude words: a title is not a skill, in any profession
  + "senior junior principal staff head engineer engineers developer developers manager managers analyst analysts "
@@ -502,7 +503,10 @@ const TIME_WORDS = new Set(("monday tuesday wednesday thursday friday saturday s
  + "january february march april may june july august september october november "
  + "december jan feb mar apr jun jul aug sep sept oct nov dec "
  + "summer winter autumn fall weekday weekdays weekend "
- + "weekends quarterly annually pacific mountain central eastern timezone timezones").split(" "));
+ + "weekends quarterly annually pacific mountain central eastern timezone timezones "
+ // "am"/"pm" are clock-time markers ("9:00 AM to 12:00 AM" on-call windows) —
+ // Title-Case-matches the proper-noun extractor same as weekday/month names.
+ + "am pm").split(" "));
 const COMPASS = new Set(["north","south","east","west","northeast","northwest","southeast","southwest","midwest"]);
 /* a country name is never a skill — office-location / global-team prose
    ("collaboration across the U.S. and India") sits OUTSIDE the comp tail.
@@ -573,10 +577,11 @@ const HYPHEN_ADJ = new RegExp("^(?:non|anti|semi|no|co)-[a-z0-9]+$|^[a-z0-9]+-(?
  + "aligned|supported|enabled|managed|aware|ready|first|only|free|approved|specific|related|oriented|native|led|"
  + "owned|backed|market|equity|tier|grade|class|level|scale|speed|time|paced|profile|leading|world|powered|new|"
  + "performing|centric|centered|solid|size|sized|side|agnostic|defined|adjacent|hosted|dollar|critical|prone|"
- // hipaa-compliant, soc2-compliant, mission-critical, error-prone, clinical-safety:
- // descriptive adjective compounds, never tool/skill names (a real curated term
- // riding the prefix, e.g. "hipaa", is still credited via the plain keyword match).
- + "compliant|safety)$");
+ // hipaa-compliant, soc2-compliant, mission-critical, error-prone, clinical-safety,
+ // fda-regulated: descriptive adjective compounds, never tool/skill names (a real
+ // curated term riding the prefix, e.g. "hipaa", is still credited via the plain
+ // keyword match).
+ + "compliant|regulated|safety)$");
 const CONJ_COMPOUND = /-(?:and|or|n)-/;
 const STREET_RE = /\b(?:blvd|boulevard|avenue|suite|ste|pkwy|hwy|plaza|floor)\b/;
 

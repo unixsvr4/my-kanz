@@ -397,6 +397,41 @@ ported phrases now rejected, the 3 phrases that needed no port
 pre-fix, and `findCurated("...Payment Card Industry compliance...")`
 resolves to the `compliance` canonical.
 
+### 3.8 2026-07-22 sync: on-call/work-schedule boilerplate (clock times, an "Hours" header, a "*-regulated" adjective)
+
+A third real-world JD (Elucid, Principal Platform Engineer) scored 90.3%
+curated but 0/3 on the dynamic-phrase check, despite the candidate having
+every real skill the JD asked for. All three "JD-specific phrases" were
+schedule/environment boilerplate, not skills:
+
+- **`am`/`pm`** — clock-time markers from an on-call-window sentence
+  ("...coverage on business days from 9:00 AM to 12:00 AM"). The all-caps
+  abbreviation Title-Case-matches the proper-noun extractor the same way a
+  weekday or month name does, so it belongs in `TIME_WORDS` alongside them.
+- **`hours`** — from a "Work Location and Hours:" section header
+  (Title-Case again). Added to `STOPWORDS` next to the existing
+  `day`/`week`/`month`/`year` generic time-unit nouns — it was a plain
+  oversight that `hour`/`hours` weren't already there.
+- **`fda-regulated`** — a hyphen-adjective compound describing the work
+  environment ("architect secure automated systems in an FDA-regulated
+  environment"), same grammatical family as the already-noise-listed
+  `-compliant`/`-critical`/`-prone`/`-safety` suffixes in `HYPHEN_ADJ` — not
+  a discrete tool/skill name. Added `regulated` to that suffix alternation
+  (so `sec-regulated`, `state-regulated`, etc. are covered too, same as the
+  Python side).
+
+Deliberately left the bare `fda` token unmatched rather than blanket-
+suppressing it: "Food and Drug Administration" is a real regulatory body
+relevant to medtech compliance work, so once the `-regulated` adjective
+noise is stripped, a standalone `fda` mention is a genuine potential
+domain-experience gap to flag, not noise to discard — same discipline as
+the `chatgpt` non-port in §3.7, applied to a phrase surfacing rather than
+one being suppressed.
+
+Verified via a standalone Node smoke test on `phraseOk` directly: `am`,
+`pm`, `hours`, `fda-regulated`, `sec-regulated`, and `state-regulated` all
+now rejected.
+
 ---
 
 ## 4. AI layer — engineering decisions
