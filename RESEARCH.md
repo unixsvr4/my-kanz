@@ -350,6 +350,53 @@ unmodified engine (git-stashed) confirming `awareness`/`dna`/`expect`/
 `shell/power`/`power` flipped `true` → `false` while `financial/insurance`
 was `false` on both sides.
 
+### 3.7 2026-07-22 sync: airline crew-member boilerplate and a garbled service-list line
+
+A second real-world JD (JetBlue, Senior Core Infrastructure Engineer) scored
+92.3% curated but only 1/29 on the dynamic-phrase check — and that lone
+"match" (`developers`) was itself noise, not a real skill overlap. Root
+cause: airline-industry crew-member/regulatory/values boilerplate that a
+generic tech-JD scorer has no reason to expect —
+
+- **Values statement**: JetBlue's "Safety, Caring, Integrity, Passion and
+  Fun" — `caring`, `fun`, `safety` joined `SOFT_SKILLS` (`integrity` was
+  *already* there from the general HR-taxonomy list — no port needed).
+- **Aviation/regulatory jargon**: `sar`, `asap`, `aviation safety action`,
+  `safety action report`, `safety ambassador`, `sms` (Safety Management
+  System, not text messages), `faa`, `osha`, `dot`, `sarbanes`, `oxley act`
+  (the two halves of "Sarbanes–Oxley Act" — `sox` itself is already
+  curated separately).
+- **HR/education boilerplate**: `diploma/ged`, `pre-employment` (drug
+  test), `business-wide`. (`work-streams` and `developers` were **already**
+  rejected pre-fix — `work` and `developer(s)` are both plain `STOPWORDS`
+  entries from the general job-title/generic-aptitude list — no port
+  needed for either.)
+- **Garbled extraction from a slash-heavy line** ("AKS/EKS Azure Data
+  Lake/ Glacier, CosmosDB / DynamoDB"): `lake` (a residual fragment of the
+  already-curated `data lake`), `pci/personally`, and `eks azure data`
+  (cross-slash/cross-line grabs) — all extraction artifacts, not real terms.
+- **`payment card industry`** — the spelled-out form of the already-curated
+  `pci` alias. Added directly to the `compliance` canonical's alias list
+  (`["compliance","soc 2","soc2","hipaa","pci","payment card industry",
+  "fedramp",...]`) rather than to `SOFT_SKILLS`, since this one is a genuine
+  curated-skill alias, not noise to discard.
+
+Deliberately did **not** port a noise-listing for `chatgpt`: unlike
+JetBlue's usage (a "using ChatGPT during the interview disqualifies you"
+clause), the Python-side corpus check showed `chatgpt` recurring as a
+*genuine* AI-tool skill mention in five other JDs ("Experience using
+AI-assisted development tools such as GitHub Copilot, Cursor, ChatGPT,
+Claude..."). Blanket-noising it would suppress a real signal elsewhere —
+the same discipline as not porting `financial/insurance` in §3.6, applied
+in the opposite direction (a phrase that looks like noise in one JD but
+isn't noise in general).
+
+Verified via a standalone Node smoke test on `phraseOk` directly: all 20
+ported phrases now rejected, the 3 phrases that needed no port
+(`integrity`, `work-streams`, `developers`) were confirmed already-`false`
+pre-fix, and `findCurated("...Payment Card Industry compliance...")`
+resolves to the `compliance` canonical.
+
 ---
 
 ## 4. AI layer — engineering decisions

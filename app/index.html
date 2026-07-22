@@ -396,7 +396,7 @@ const KEYWORD_DB = {
   },
   "Security & Compliance": {
     "security": ["security", "devsecops", "الأمن", "الأمن السيبراني"], "encryption": ["encryption", "tls", "ssl", "التشفير"],
-    "compliance": ["compliance", "soc 2", "soc2", "hipaa", "pci", "fedramp", "الامتثال"],
+    "compliance": ["compliance", "soc 2", "soc2", "hipaa", "pci", "payment card industry", "fedramp", "الامتثال"],
     "vault": ["vault", "secrets management", "secrets"], "zero trust": ["zero trust", "zero-trust"],
     "vulnerability": ["vulnerability", "vulnerability management", "cve", "الثغرات الأمنية"],
     "authentication": ["authentication", "oauth", "sso", "saml", "المصادقة"], "audit": ["audit", "auditing", "التدقيق"],
@@ -545,7 +545,21 @@ const SOFT_SKILLS = new Set(["communication","communication skills","verbal comm
  // "financial/insurance" doesn't apply here — this engine's STOPWORDS already
  // includes "insurance" as a benefits-boilerplate word, so phraseOk's
  // any-part-is-a-stopword rule rejects the whole slash phrase unaided.)
- "awareness","dna","expect","shell/power","power"]);
+ "awareness","dna","expect","shell/power","power",
+ // JetBlue-style airline crew-member / regulatory / values boilerplate (Python
+ // engine's NOISE_PHRASES equivalent): not tech skills, just aviation-industry
+ // HR/compliance language that happens to Title-Case or acronym-match the
+ // proper-noun extractor. ("integrity" already covered above; "developers" is
+ // already a STOPWORD; "work-streams" is already rejected because "work" is a
+ // STOPWORD part — none of the three needed porting.)
+ "sar","asap","aviation safety action","safety action report","safety ambassador",
+ "sms","safety","faa","osha","dot","sarbanes","oxley act","caring","fun",
+ "diploma/ged","pre-employment","business-wide",
+ // Extraction artifacts from a slash-heavy service-list line ("AKS/EKS Azure
+ // Data Lake/ Glacier, CosmosDB / DynamoDB"): "lake" is a residual fragment of
+ // the already-curated "data lake"; "pci/personally" and "eks azure data" are
+ // garbled cross-slash/cross-line grabs, not real terms.
+ "lake","pci/personally","eks azure data"]);
 ["مهارات التواصل","التواصل","العمل الجماعي","روح الفريق","العمل ضمن فريق","القيادة","حل المشكلات",
  "إدارة الوقت","الاهتمام بالتفاصيل","التفكير النقدي","المرونة","الإبداع","الدافعية","الالتزام",
  "الأمانة","العمل تحت الضغط","التعامل مع ضغط العمل","بناء العلاقات","التفكير الاستراتيجي",
