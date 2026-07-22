@@ -431,6 +431,7 @@ const KEYWORD_DB = {
 const STOPWORDS = new Set(("a an and or of to in for with on at by the is are was were be been being have has had "
  + "do does did will would can could should may might must this that these those you your we our they their it its "
  + "as from into over under about across after before between during within without more most other some such only "
+ + "beyond "
  + "own same so than too very just not no nor all any both each few once here there when where why how what which who "
  + "team teams work working experience experienced years year strong excellent ability skills skill knowledge "
  + "understanding familiarity proficiency responsibilities requirements qualifications preferred required plus bonus "
@@ -580,8 +581,10 @@ const HYPHEN_ADJ = new RegExp("^(?:non|anti|semi|no|co)-[a-z0-9]+$|^[a-z0-9]+-(?
  // hipaa-compliant, soc2-compliant, mission-critical, error-prone, clinical-safety,
  // fda-regulated: descriptive adjective compounds, never tool/skill names (a real
  // curated term riding the prefix, e.g. "hipaa", is still credited via the plain
- // keyword match).
- + "compliant|regulated|safety)$");
+ // keyword match). "-office" (front-office, back-office, middle-office) is a
+ // finance-industry organizational descriptor (which team a system serves),
+ // never a tech name.
+ + "compliant|regulated|safety|office)$");
 const CONJ_COMPOUND = /-(?:and|or|n)-/;
 const STREET_RE = /\b(?:blvd|boulevard|avenue|suite|ste|pkwy|hwy|plaza|floor)\b/;
 

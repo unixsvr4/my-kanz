@@ -432,6 +432,28 @@ Verified via a standalone Node smoke test on `phraseOk` directly: `am`,
 `pm`, `hours`, `fda-regulated`, `sec-regulated`, and `state-regulated` all
 now rejected.
 
+### 3.9 2026-07-22 sync: a sentence-opener and finance-industry organizational descriptors
+
+A fourth real-world JD (Millennium, Cloud Platform / Infrastructure
+Engineer) scored 82.5% despite 100% curated match — 2 of 4 dynamic
+phrases were noise:
+
+- **`beyond`** — a Title-Case sentence-opener ("Beyond immediate
+  delivery, you'll help define platform infrastructure best practices...").
+  Added to `STOPWORDS` next to the other prepositions (`about`, `across`,
+  `between`, etc.) it already sits alongside on the Python side.
+- **`front-office`** — a finance-industry organizational descriptor
+  ("front-office trading teams"): which business function a system
+  serves, not a technology. Same grammatical family as the existing
+  `-compliant`/`-critical`/`-regulated` `HYPHEN_ADJ` suffixes, so `office`
+  joined that alternation (covering `front-office`, `back-office`, and
+  `middle-office` in one shot). The `-office` family recurs across the
+  corpus (Millennium, SumUp, ToScale, Vertafore), always in this same
+  organizational sense — never a false positive against a real tech name.
+
+Verified via a standalone Node smoke test on `phraseOk` directly: `beyond`,
+`front-office`, `back-office`, and `middle-office` all now rejected.
+
 ---
 
 ## 4. AI layer — engineering decisions
