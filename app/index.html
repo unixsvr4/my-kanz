@@ -535,7 +535,17 @@ const SOFT_SKILLS = new Set(["communication","communication skills","verbal comm
  "solution delivery process","risk management","data management","strategic thinking","relationship building",
  // job-posting boilerplate phrases (not skills, but recur enough across JDs
  // to earn a fixed spot next to the soft-skill noise they sit alongside)
- "must-haves","nice-to-haves","life balance","early-stage","early stage","successful"]);
+ "must-haves","nice-to-haves","life balance","early-stage","early stage","successful",
+ // Prudential-style JD noise (jd_noise_audit DF 3-4 on the Python corpus):
+ // generic sentence-starters mistaken for proper nouns ("Awareness of cloud
+ // platforms...", "built into our DNA!", "What You Can Expect...") and a
+ // garbled "Shell/Power scripting" JD line (meaning PowerShell) that
+ // double-counts the already-curated "shell" and re-surfaces "power" as a
+ // bare fragment once the compound is filtered. (The companion Python fix for
+ // "financial/insurance" doesn't apply here — this engine's STOPWORDS already
+ // includes "insurance" as a benefits-boilerplate word, so phraseOk's
+ // any-part-is-a-stopword rule rejects the whole slash phrase unaided.)
+ "awareness","dna","expect","shell/power","power"]);
 ["مهارات التواصل","التواصل","العمل الجماعي","روح الفريق","العمل ضمن فريق","القيادة","حل المشكلات",
  "إدارة الوقت","الاهتمام بالتفاصيل","التفكير النقدي","المرونة","الإبداع","الدافعية","الالتزام",
  "الأمانة","العمل تحت الضغط","التعامل مع ضغط العمل","بناء العلاقات","التفكير الاستراتيجي",

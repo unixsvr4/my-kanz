@@ -318,6 +318,38 @@ same Node smoke test with the verbatim triggering JD text (all scam-block
 phrases — `fabrichealth.com`, `gem.com`, `google meet`, `sms`, "verify the
 domain", "authorized" — stripped correctly, no code change needed).
 
+### 3.6 2026-07-21 sync: prose sentence-starters and a garbled JD line no longer count as missing skills
+
+A real-world JD (Prudential, Senior Cloud Engineer) scored 95.7% curated but
+only 1/7 on the dynamic-phrase check, tanking the harmonic-mean keyword score
+to 43.9% FAIL. All 6 "missing" phrases in the Python engine turned out to be
+noise, not skill gaps:
+
+- **`awareness`, `dna`, `expect`** — generic sentence-starter/header words
+  mistaken for proper nouns ("Awareness of cloud platforms...", "built into
+  our DNA!", "Here is What You Can Expect..."). Joined `SOFT_SKILLS` (this
+  port's `NOISE_PHRASES` stand-in, per §3.4).
+- **`shell/power` and its bare fragment `power`** — a garbled JD line
+  ("Shell/Power scripting", meaning PowerShell) that double-counts the
+  already-curated `shell` (an alias of `bash`) and re-surfaces `power` alone
+  once the compound itself is filtered. Also joined `SOFT_SKILLS`.
+- **`financial/insurance`** — an industry-vertical descriptor, not a tech
+  skill. This one did **not** need porting: this engine's `STOPWORDS` already
+  contains `insurance` (a benefits-boilerplate word, added for medical/dental/
+  vision-insurance lines), and `phraseOk`'s "any part of a multi-word phrase
+  is a stopword → reject" rule (the same rule that turns "expert-level
+  experience with kubernetes" into prose, not a skill) rejects the whole
+  slash-phrase unaided. Confirmed via a before/after Node smoke test: the
+  pre-fix engine already returned `false` for `financial/insurance`, so no
+  code change was made for this one.
+
+Verified via a standalone Node smoke test on `phraseOk` directly (all 5
+ported noise phrases now rejected; `ci-cd`/`scikit-learn`/`node-js`/`k8s`/
+`power bi` still pass through untouched) and a before/after diff against the
+unmodified engine (git-stashed) confirming `awareness`/`dna`/`expect`/
+`shell/power`/`power` flipped `true` → `false` while `financial/insurance`
+was `false` on both sides.
+
 ---
 
 ## 4. AI layer — engineering decisions
