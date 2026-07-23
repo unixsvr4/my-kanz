@@ -559,6 +559,46 @@ either, since they're not noise): `kubeflow`, `mlflow`, `agentic ai`,
 `sagemaker`, `secure-by-default`, `vpn` (curated) — real MLOps and
 Zero-Trust-adjacent-networking terms, not extraction bugs.
 
+### 3.12 2026-07-23 sync: an interview-integrity disclaimer and two curated terms
+
+A seventh real-world JD (JetBlue) hit an extreme case of the harmonic-mean
+confidence-ramp cliff on the Python side: 92.3% curated match but 0 of 7
+dynamic phrases matched, so the harmonic mean of (curated, dynamic)
+collapsed straight to 0 and the JD scored 30.0% overall despite the strong
+curated match. All three fixes generalize here:
+
+- **AI-interview-integrity disclaimer** — JetBlue's JD warns "The use of
+  ChatGPT or any other automated tool during the interview process will
+  disqualify a candidate…", which names an AI tool only to prohibit using
+  it live in the interview, not as a skill ask. This is deliberately NOT a
+  blanket "chatgpt is noise" rule — other real JDs in the Python corpus
+  (earnin, hud, netboxlabs) list ChatGPT/Copilot/Cursor as genuine
+  AI-assisted-development skill signals, so blocklisting the word itself
+  would wrongly zero those out. Added `AI_INTERVIEW_INTEGRITY`, a line-scoped
+  test (mirrors the Python `_AI_INTERVIEW_INTEGRITY_RE`) that only fires
+  when an AI/automated-tool mention, "interview", and "disqualif*" all
+  appear on the same line — order-independent via lookaheads. Verified via
+  Node: the disclaimer line is stripped (`chatgpt` no longer present after
+  `prepJD`), while a genuine "AI-assisted development tools... ChatGPT..."
+  mention survives untouched.
+- **`opentofu`** — OpenTofu is Terraform's drop-in-compatible open-source
+  fork; JDs phrasing it as "Terraform/OpenTofu" mean either is acceptable,
+  so real Terraform experience already satisfies it. Aliased onto the
+  existing curated `terraform`. Verified: `CURATED_TOKENS.has("opentofu")`
+  → `true`.
+- **`pii`** — Personally Identifiable Information is a standard compliance
+  term in the same family as the already-curated `hipaa`/`pci`/`soc 2`.
+  Curated as a new Security & Compliance term (with the Arabic equivalent,
+  matching this app's bilingual convention). Verified:
+  `CURATED_TOKENS.has("pii")` → `true`.
+
+Not ported: the Python side also added a `tailor_resume.py` backstop
+(`ensure_jd_dynamic_phrases`) so a hand-added base-resume term with no
+KEYWORD_DB entry (e.g. "Glacier") can't be silently dropped by the LLM
+rewrite. This app has no resume-tailoring/LLM-rewrite step — it only
+scores whatever text the user pastes — so there's nothing analogous to
+backstop here.
+
 ---
 
 ## 4. AI layer — engineering decisions

@@ -342,7 +342,7 @@ const KEYWORD_DB = {
     "gitops": ["gitops"], "circleci": ["circleci"], "spinnaker": ["spinnaker"],
   },
   "Infrastructure as Code": {
-    "terraform": ["terraform"], "terragrunt": ["terragrunt"], "ansible": ["ansible"], "cloudformation": ["cloudformation"],
+    "terraform": ["terraform", "opentofu", "terraform/opentofu"], "terragrunt": ["terragrunt"], "ansible": ["ansible"], "cloudformation": ["cloudformation"],
     "iac": ["iac", "infrastructure as code", "infrastructure-as-code"], "pulumi": ["pulumi"],
     "packer": ["packer"], "puppet": ["puppet"], "chef": ["chef"],
     "atlantis": ["atlantis"], "bicep": ["bicep", "azure bicep"],
@@ -397,6 +397,7 @@ const KEYWORD_DB = {
   "Security & Compliance": {
     "security": ["security", "devsecops", "الأمن", "الأمن السيبراني"], "encryption": ["encryption", "tls", "ssl", "التشفير"],
     "compliance": ["compliance", "soc 2", "soc2", "hipaa", "pci", "payment card industry", "fedramp", "الامتثال"],
+    "pii": ["pii", "personally identifiable information", "معلومات التعريف الشخصية"],
     "vault": ["vault", "secrets management", "secrets"],
     "zero trust": ["zero trust", "zero-trust", "ztna", "zero trust network access", "zero trust network"],
     "vulnerability": ["vulnerability", "vulnerability management", "cve", "الثغرات الأمنية"],
@@ -707,6 +708,14 @@ const BENEFITS_LINE = new RegExp("\\b(401\\s?\\(?k\\)?|pre[\\s-]?tax|dental|visi
  + "wellness (stipend|allowance|program)|gym membership|commuter benefits?|hsa|fsa|espp|stock options?|"
  + "equity package|sign-on bonus|(cell )?phone stipend|casual dress|paid holidays?|sabbatical|"
  + "\\$\\s?\\d{2,3}[,\\d]*\\s*(-|–|to)\\s*\\$?\\s?\\d{2,3}[,\\d]*)\\b.*$", "i");
+/* post-ChatGPT interview-integrity disclaimer ("The use of ChatGPT or any
+   other automated tool during the interview process will disqualify a
+   candidate…", JetBlue) — names an AI tool only to warn against using it
+   live in the interview, not a skill ask. NOT a blanket "chatgpt is noise"
+   rule: other JDs list ChatGPT/Copilot/Cursor as genuine AI-assisted-dev
+   skill signals, so this only fires when an AI/automated-tool mention,
+   "interview", and "disqualif*" all appear on the same line. */
+const AI_INTERVIEW_INTEGRITY = /(?=.*\binterview\b)(?=.*\bdisqualif\w*\b)(?=.*(?:chatgpt|generative\s+ai|\bai\b|automated\s+tool))/i;
 
 /* Anchored-block stripper: a run of consecutive non-blank lines where >=minHits
    lines match a closed-set anchor and all-but-one qualify as list-like is a
@@ -763,6 +772,7 @@ function prepJD(jd) {
     if (cut) continue;
     if (AT_COMPANY_PITCH.test(line) || METADATA_LINE.test(line)) continue;
     if (WE_PITCH.test(line) || BRAND_PITCH.test(line)) continue;
+    if (AI_INTERVIEW_INTEGRITY.test(line)) continue;
     kept.push(raw);
   }
 
