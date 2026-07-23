@@ -599,6 +599,50 @@ rewrite. This app has no resume-tailoring/LLM-rewrite step — it only
 scores whatever text the user pastes — so there's nothing analogous to
 backstop here.
 
+### 3.13 2026-07-23 sync: an "X-to-Y" compound, two adjective suffixes, and inline slogan hashtags
+
+An eighth real-world JD (Paramount) had 96.2% curated match but only 2/22
+dynamic phrases, mostly marketing/brand noise from a duplicated "About
+Paramount Streaming" self-description paragraph. The Python side also found
+a broader structural bug there (`_SKILLS_LINE_RE`'s hyphen-separator form
+had no spacing requirement, so "platform-wide observability." false-fired
+on the header word "platform" immediately followed by "-"), but this app's
+skill-list extraction (`items.every(i => i.split(/\s+/).length <= 4)`, no
+header-word regex at all) is structurally immune to that one, same as
+§3.11's paren-balance finding — confirmed no port needed there.
+
+What does generalize:
+
+- **`direct-to-consumer`** — an "X-to-Y" relationship/business-model
+  compound (business-to-business, peer-to-peer), never a tool name. Added
+  `TO_COMPOUND = /-to-/`. Verified: `phraseOk("direct-to-consumer")` →
+  `false`.
+- **`world-renowned`**, **`platform-wide`** — generic marketing/scope
+  adjectives; added `renowned` and `wide` to the existing `HYPHEN_ADJ`
+  suffix set.
+- **`inter-service`** — "inter-" always describes a relationship between
+  things, never a tool; added to the existing prefix set alongside
+  non-/anti-/semi-/no-/co-.
+- **`#WeAreParamount`** — an inline (not whole-line) slogan hashtag; this
+  app had no hashtag-stripping mechanism at all yet (the Python side's
+  whole-line-only stripper doesn't port cleanly to a single-pass `prepJD`
+  either). Added `HASHTAG_WORD`, scoped to CamelCase-slogan/ALL-CAPS
+  hashtags so a genuine inline tech hashtag ("we use #kubernetes daily")
+  survives untouched — same closed-set reasoning as the Python fix, ported
+  as a new mechanism since none existed here yet.
+- **`hpa`** — already curated here (aliased onto `autoscaling`) from an
+  earlier round; no change needed.
+
+Verified via Node: `phraseOk` rejects all three grammar-shape phrases above,
+`prepJD` strips `#WeAreHiring`/`#DISNEYTECH` while keeping `#kubernetes`.
+
+Not ported: Paramount's own sub-brands (`pluto tv`, `showtime`) and internal
+team name (`applied intelligence personalization`) — one-off, no
+generalizable regex shape, same call as skipping Bloomberg's `cnci` in
+§3.10. The Python side's reverted `error-budget` curation attempt (caused a
+cliff regression — see the Python RESEARCH notes) was never attempted here
+in the first place, so there's nothing to revert.
+
 ---
 
 ## 4. AI layer — engineering decisions

@@ -576,7 +576,7 @@ const SOFT_SKILLS = new Set(["communication","communication skills","verbal comm
    (rock-solid, people-centered, fast-paced, no-fee) and conjunction infixes
    (drag-and-drop). Real hyphenated tech (ci-cd, scikit-learn) doesn't end in
    these adjective suffixes. */
-const HYPHEN_ADJ = new RegExp("^(?:non|anti|semi|no|co)-[a-z0-9]+$|^[a-z0-9]+-(?:based|focused|driven|facing|friendly|"
+const HYPHEN_ADJ = new RegExp("^(?:non|anti|semi|no|co|inter)-[a-z0-9]+$|^[a-z0-9]+-(?:based|focused|driven|facing|friendly|"
  + "aligned|supported|enabled|managed|aware|ready|first|only|free|approved|specific|related|oriented|native|led|"
  + "owned|backed|market|equity|tier|grade|class|level|scale|speed|time|paced|profile|leading|world|powered|new|"
  + "performing|centric|centered|solid|size|sized|side|agnostic|defined|adjacent|hosted|dollar|critical|prone|"
@@ -585,11 +585,17 @@ const HYPHEN_ADJ = new RegExp("^(?:non|anti|semi|no|co)-[a-z0-9]+$|^[a-z0-9]+-(?
  // curated term riding the prefix, e.g. "hipaa", is still credited via the plain
  // keyword match). "-office" (front-office, back-office, middle-office) is a
  // finance-industry organizational descriptor (which team a system serves),
- // never a tech name.
- + "compliant|regulated|safety|office|routed)$");
+ // never a tech name. "inter-" (inter-service, inter-team) always describes a
+ // relationship BETWEEN things. "-wide" (platform-wide, company-wide) and
+ // "-renowned" (world-renowned) are generic scope/marketing adjectives.
+ + "compliant|regulated|safety|office|routed|wide|renowned)$");
 // "-routed" (direct-routed, software-routed): marketing shorthand for HOW
 // traffic is routed, not a tool name.
 const CONJ_COMPOUND = /-(?:and|or|n)-/;
+// "X-to-Y" relationship/business-model compounds (direct-to-consumer,
+// business-to-business, peer-to-peer) describe HOW two things relate, never
+// a tool name.
+const TO_COMPOUND = /-to-/;
 const STREET_RE = /\b(?:blvd|boulevard|avenue|suite|ste|pkwy|hwy|plaza|floor)\b/;
 
 const PROPER_NOUN_WEIGHT = 0.5;
@@ -738,11 +744,20 @@ function stripAnchoredRuns(lines, isAnchor, qualifies, minRun, minHits) {
   return out;
 }
 
+// inline "#SquashedSlogan" or "#ALLCAPS" hashtag, wherever it sits in a
+// sentence ("#WeAreHiring", "#DISNEYTECH", "#RPO") — recruiting/marketing
+// campaign hashtags, never a skill token. Scoped to CamelCase-squashed
+// multi-word slogans and all-caps acronym-style tags; a genuine inline tech
+// hashtag ("we use #kubernetes daily") is plain lowercase and is
+// deliberately left alone.
+const HASHTAG_WORD = /#(?:[A-Z][a-z0-9]*[A-Z][\w-]*|[A-Z]{2,}[\w-]*)/g;
+
 function prepJD(jd) {
   // missing-space sentence welds ("their best.Here, you…") fake dotted tech
   // tokens; real dotted tech is lowercase (node.js) or caps (ASP.NET) after
   // the dot, so Uppercase-then-lowercase can never split a real token.
   jd = jd.replace(/([a-z])\.(?=[A-Z][a-z])/g, "$1. ");
+  jd = jd.replace(HASHTAG_WORD, " ");
   let lines = jd.split(/\r?\n/);
 
   // 1) labeled company-intro block ("The Company:", "About Us") — excise up to
@@ -818,7 +833,7 @@ function phraseOk(p) {
   if (US_STATES.has(p) || COUNTRIES.has(p) || CONTINENTS.has(p) || CITY_NOISE.has(p)) return false; // places are never skills
   if (SOFT_SKILLS.has(p)) return false;                          // HR-taxonomy soft skills
   if (STREET_RE.test(p)) return false;                           // office addresses
-  if (CONJ_COMPOUND.test(p) || HYPHEN_ADJ.test(p)) return false; // grammar, not tools
+  if (CONJ_COMPOUND.test(p) || HYPHEN_ADJ.test(p) || TO_COMPOUND.test(p)) return false; // grammar, not tools
   const parts = p.split(/[\s/.-]+/).filter(w => w && w !== "&");
   if (!parts.length) return false;
   // a multi-word phrase carrying ANY stopword part is prose, not a skill
