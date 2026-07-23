@@ -496,6 +496,69 @@ The other four **do not port**, for the same reason `coreweave`/`transcend`/
   left unported, same call as skipping the Python-only "Recruitment Fraud
   Alert" header fix in §3.5.
 
+### 3.11 2026-07-23 sync: employer-domain split, a generic verb, and a marketing-adjective suffix
+
+A sixth real-world JD (Appgate) scored 59.3% on the Python side despite
+93.3% curated match: 6 of its 13 dynamic misses were noise, each a
+distinct root cause rather than one recurring pattern. Four generalize here:
+
+- **`appgate.com`** — the employer's own domain from a "Learn more at
+  appgate.com" line. The employer-noise check split phrases on
+  `[ /-]+` only, never `.`, so the domain's dot never separated it from
+  the derived employer term. Extended the split to `[ /.-]+` in the
+  `extractDynamicPhrases` employer check. Verified via Node: with an
+  employer term of `appgate` present, `"appgate.com".split(/[ /.-]+/)`
+  now yields `["appgate", "com"]`, matching. Safe for the same reason as
+  the Python side: a real skill token that happens to share a bare word
+  with the employer name (e.g. `node` for a Node.js-themed JD) is already
+  excluded from `employerTerms()`'s output via its `CURATED_TOKENS` guard.
+  Note this app has no filename-based employer derivation at all (users
+  paste text, not a `job_desc_<company>.txt` file) — for the *actual*
+  Appgate JD text, none of `employerTerms()`'s three text patterns (EEO
+  self-reference, "is a/an company", "provides/builds/...") happen to fire
+  on Appgate's specific self-intro wording, so this fix is verified correct
+  in isolation (Node test with a matching self-intro) rather than against
+  the real JD end-to-end — a separate, pre-existing gap in this app's
+  employer-detection coverage, not something to expand now.
+- **`test`** — a bare single-word verb, generic and never a skill alone
+  (real test-related skills are always multi-word: "unit testing",
+  "penetration testing"). Added to `RESP_VERBS`. Verified: `respVerb("test")`
+  → `true`, `phraseOk("test")` → `false`, `respVerb("testing")` → `true`.
+- **`direct-routed`** — Appgate's own product-marketing adjective ("the
+  only direct-routed Zero Trust solution"), same family as the existing
+  `HYPHEN_ADJ` suffix set (`-based`, `-driven`, `-native`, ...). Added
+  `routed`. Verified: `HYPHEN_ADJ.test("direct-routed")` → `true`,
+  `phraseOk("direct-routed")` → `false`.
+- **`ztna`** / **`zero trust network`** — literal synonyms of the
+  already-curated `zero trust` (Zero Trust Network Access is the same
+  concept, not a distinct skill) — aliased onto it, same pattern as
+  existing acronym/expansion pairs (`sso`, `waf`). Verified:
+  `CURATED_TOKENS.has("ztna")` → `true`.
+
+One Python-side fix does **not** port:
+
+- **Unbalanced-paren rejection** — the Python bug this fixes ("stateful
+  technologies (e.g. kafka" as a mangled comma-split fragment) arises
+  because Python's `_SKILLS_LINE_RE` matches on a header *word* alone,
+  independent of whether the rest of the line actually looks like a list.
+  This app's source-1 skill-list extraction is structurally immune: it
+  requires **all** comma/colon/paren-split items to be short (≤4 words)
+  before treating a line as a list at all (`extractDynamicPhrases`'s
+  `items.every(i => i.split(/\s+/).length <= 4)` gate), so a
+  responsibility-bullet sentence with a parenthetical example list never
+  qualifies as a skill-list line here in the first place — there's no
+  observed failure mode to fix. Adding the same defensive check anyway
+  would be speculative complexity with no verified trigger, so it's
+  skipped (same reasoning as declining to port fixes for bugs that don't
+  reproduce in this app's different extraction design, e.g. §3.5's
+  Python-only header fix).
+
+Genuine gaps intentionally left alone on the Python side (not ported here
+either, since they're not noise): `kubeflow`, `mlflow`, `agentic ai`,
+`experiment-tracking`, `sase`, `sdp`, `tunneling/overlay` (dynamic) and
+`sagemaker`, `secure-by-default`, `vpn` (curated) — real MLOps and
+Zero-Trust-adjacent-networking terms, not extraction bugs.
+
 ---
 
 ## 4. AI layer — engineering decisions

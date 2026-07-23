@@ -397,7 +397,8 @@ const KEYWORD_DB = {
   "Security & Compliance": {
     "security": ["security", "devsecops", "الأمن", "الأمن السيبراني"], "encryption": ["encryption", "tls", "ssl", "التشفير"],
     "compliance": ["compliance", "soc 2", "soc2", "hipaa", "pci", "payment card industry", "fedramp", "الامتثال"],
-    "vault": ["vault", "secrets management", "secrets"], "zero trust": ["zero trust", "zero-trust"],
+    "vault": ["vault", "secrets management", "secrets"],
+    "zero trust": ["zero trust", "zero-trust", "ztna", "zero trust network access", "zero trust network"],
     "vulnerability": ["vulnerability", "vulnerability management", "cve", "الثغرات الأمنية"],
     "authentication": ["authentication", "oauth", "sso", "saml", "المصادقة"], "audit": ["audit", "auditing", "التدقيق"],
     "waf": ["waf", "web application firewall"], "selinux": ["selinux"],
@@ -470,7 +471,7 @@ const STOPWORDS = new Set(("a an and or of to in for with on at by the is are wa
 const RESP_VERBS = new Set(("develop manage lead run own drive partner collaborate design build implement create "
  + "maintain support deliver define evaluate conduct guide enable oversee coordinate execute establish improve "
  + "optimize monitor analyze report champion architect automate embrace participate provide ensure "
- + "formulate supervise construct investigate compile pinpoint pursue discover").split(" "));
+ + "formulate supervise construct investigate compile pinpoint pursue discover test").split(" "));
 function respVerb(w) {
   if (RESP_VERBS.has(w)) return true;
   for (const suf of ["es", "s"]) if (w.endsWith(suf) && RESP_VERBS.has(w.slice(0, -suf.length))) return true;
@@ -584,7 +585,9 @@ const HYPHEN_ADJ = new RegExp("^(?:non|anti|semi|no|co)-[a-z0-9]+$|^[a-z0-9]+-(?
  // keyword match). "-office" (front-office, back-office, middle-office) is a
  // finance-industry organizational descriptor (which team a system serves),
  // never a tech name.
- + "compliant|regulated|safety|office)$");
+ + "compliant|regulated|safety|office|routed)$");
+// "-routed" (direct-routed, software-routed): marketing shorthand for HOW
+// traffic is routed, not a tool name.
 const CONJ_COMPOUND = /-(?:and|or|n)-/;
 const STREET_RE = /\b(?:blvd|boulevard|avenue|suite|ste|pkwy|hwy|plaza|floor)\b/;
 
@@ -845,7 +848,13 @@ function extractDynamicPhrases(jdRaw) {
     p = p.toLowerCase().trim().replace(/^[-–•*·\s]+|[.,;:،؛]+$/g, "");
     if (!phraseOk(p)) return;
     if (CURATED_TOKENS.has(p) || isDoubleCount(p)) return;       // curated already covers it
-    if (p.split(/[ /-]+/).some(t => employer.has(t))) return;    // employer name ≠ skill
+    // "." splits an employer-domain mention ("appgate.com" from a "Learn
+    // more at appgate.com" line) into "appgate" + "com" so it matches the
+    // filename/self-intro-derived term — a company's own URL is never a
+    // skill. A real skill token sharing a bare word with the employer name
+    // (e.g. "node" for a Node.js JD) is already excluded from `employer` via
+    // the CURATED_TOKENS guard in employerTerms, so this can't misfire.
+    if (p.split(/[ /.-]+/).some(t => employer.has(t))) return;    // employer name ≠ skill
     weights.set(p, Math.max(weights.get(p) || 0, w));
   };
 
