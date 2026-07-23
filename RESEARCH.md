@@ -643,6 +643,54 @@ generalizable regex shape, same call as skipping Bloomberg's `cnci` in
 cliff regression — see the Python RESEARCH notes) was never attempted here
 in the first place, so there's nothing to revert.
 
+### 3.14 2026-07-23 sync: a ninth real-world JD (Talkiatry) finds a header-orphan
+bug in *both* engines, ported only what's safe here
+
+Talkiatry: 93.5% curated (only genuine gaps: react, typescript) but 0/4
+dynamic phrases — all noise. Two ported cleanly:
+
+- **`scale-up`** — a company-stage descriptor ("startup or scale-up"), not a
+  skill. Added to `SOFT_SKILLS` alongside the existing `fintech`-style
+  industry bucket.
+- **`tele-health`** / **`telehealth`** — an industry-vertical descriptor
+  (healthcare sub-sector), same bucket. Added to `SOFT_SKILLS`.
+  Verified: `phraseOk` rejects `scale-up`, `scaleup`, `telehealth`,
+  `tele-health`.
+
+One NOT ported, deliberately, after a real investigation: the Python side's
+`_true_run_start` fix (a 4+-word Title-Case header like "How Success Is
+Measured" gets split by `_PROPER_RE`'s 3-word cap, orphaning the tail word
+"Measured" past the sentence-boundary filter). This app's proper-noun loop
+has no word-count cap (`while` loop extends a chain as far as consecutive
+Title-Case words go), so the Python bug's specific mechanism (the cap) isn't
+present — but a **different-shaped version of the same symptom** is:
+`extractDynamicPhrases("How Success Is Measured")` still yields
+`[["success", 0.5], ["measured", 0.5]]`, because "Is" is capitalized but too
+short to match the `^[A-Z][a-z]{2,}$` word-shape regex, breaking the chain
+and letting both fragments either side of it restart as "fresh" captures.
+
+The tempting fix — treat any capitalized `words[i-1]` (even one that failed
+the shape regex) as "still inside the opening run, keep suppressing" — was
+built and tested, then **rejected** before porting: it also suppresses the
+extremely common "Capitalized-verb Capitalized-tool" bullet shape, e.g.
+`extractDynamicPhrases("Deploy Databricks and Snowflake automation.")`
+currently correctly yields `[["databricks", 0.5]]` (a genuine, valuable
+capture — line-leading responsibility verbs followed by a real tool name are
+one of the most common bullet shapes in this corpus), and the "still
+capitalized" heuristic would zero it out. The two cases are
+indistinguishable by capitalization alone; the Python fix works because it
+operates on a bounded regex-cap artifact, not on capitalization sequencing,
+and that mechanism has no analog here. Distinguishing the two shapes properly
+would need either a short-function-word list (Is/To/Of/On/…) scoped only to
+suppressing continuations, or the (much larger) `respVerb`-based line
+analysis the skills-line source already has (§1, `items` branch) ported into
+the proper-noun branch too — deferred as real follow-up work, not attempted
+under time pressure given the risk of silently breaking the far more common
+verb+tool pattern. Left as a known, minor, occasional single-common-word
+noise leak (previously observed on Talkiatry's own JD, harmless there since
+`measured`/`success` don't crowd out any genuine dynamic phrase in that
+document).
+
 ---
 
 ## 4. AI layer — engineering decisions
