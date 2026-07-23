@@ -470,7 +470,7 @@ const STOPWORDS = new Set(("a an and or of to in for with on at by the is are wa
 const RESP_VERBS = new Set(("develop manage lead run own drive partner collaborate design build implement create "
  + "maintain support deliver define evaluate conduct guide enable oversee coordinate execute establish improve "
  + "optimize monitor analyze report champion architect automate embrace participate provide ensure "
- + "formulate supervise construct investigate compile pinpoint pursue").split(" "));
+ + "formulate supervise construct investigate compile pinpoint pursue discover").split(" "));
 function respVerb(w) {
   if (RESP_VERBS.has(w)) return true;
   for (const suf of ["es", "s"]) if (w.endsWith(suf) && RESP_VERBS.has(w.slice(0, -suf.length))) return true;

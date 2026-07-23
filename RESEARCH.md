@@ -454,6 +454,48 @@ phrases were noise:
 Verified via a standalone Node smoke test on `phraseOk` directly: `beyond`,
 `front-office`, `back-office`, and `middle-office` all now rejected.
 
+### 3.10 2026-07-22 sync: a bullet-opening verb (partial port — company-name noise deliberately skipped)
+
+A fifth real-world JD (Talon — actually a Bloomberg posting saved under a
+non-Bloomberg filename) scored 60.4% on the Python side despite 89.3%
+curated match: 5 of 6 dynamic phrases were noise. Only one of the five
+generalizes to this app:
+
+- **`discover`** — a bullet/sentence-opening verb ("Discover what makes
+  Bloomberg unique..."), same family as the existing `RESP_VERBS` set
+  (`recommend`, `ensure`, `establish`, ...). Added to `RESP_VERBS`. Verified
+  via Node smoke test: `respVerb("discover")` → `true`, `phraseOk("discover")`
+  → `false`, and the gerund form (`discovering`) still resolves correctly
+  through the existing suffix-stripping logic.
+
+The other four **do not port**, for the same reason `coreweave`/`transcend`/
+`comcast` (§3.4, §3.6) never did:
+
+- **`bloomberg`**, **`cnci`** — the employer name and its internal team
+  acronym (Cloud Native Compute Infrastructure). These are noise only because
+  they're proper nouns specific to one real employer in the author's own job
+  search; this app's `employerTerms()` derives the brand from the JD text
+  itself (EEO self-reference, corporate self-intro, "At X, we..." pitch,
+  brand-narrative openers) rather than from a filename, so it's already a
+  *different, filename-independent* mechanism than the Python side's bug (a
+  JD saved under a mismatched filename). Confirmed neither this JD's
+  self-intro shape ("Bloomberg runs on data!") nor Bloomberg-specific team
+  jargon would be caught by any *general* brand-detection rule worth adding —
+  hardcoding one company's name into a bilingual, multi-employer scoring
+  engine isn't a generalization, it's exactly the per-JD noise this app's
+  architecture is designed to avoid needing.
+- **`business area`**, **`ref`** — Bloomberg careers-site template field
+  labels ("Location / \<city\> / Business Area / \<dept\> / Ref # / \<req
+  number\>", one label per line with no colon). `METADATA_LINE` already
+  strips this *class* of line generically, but only in `key: value` shape;
+  loosening its colon requirement to match label-only lines would risk
+  stripping real prose that happens to start with a word like "location"
+  ("Location flexibility is a core value here.") since the line-start match
+  has no trailing anchor to fall back on. Not a safe, zero-maintenance
+  generalization the way a `HYPHEN_ADJ` suffix or `TIME_WORDS` entry is —
+  left unported, same call as skipping the Python-only "Recruitment Fraud
+  Alert" header fix in §3.5.
+
 ---
 
 ## 4. AI layer — engineering decisions
