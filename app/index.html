@@ -569,7 +569,18 @@ const SOFT_SKILLS = new Set(["communication","communication skills","verbal comm
  "lake","pci/personally","eks azure data",
  // Talkiatry-style JD noise: company-stage and industry-vertical
  // descriptors, not skills (same bucket as the Python engine's "fintech").
- "scale-up","scaleup","telehealth","tele-health"]);
+ "scale-up","scaleup","telehealth","tele-health",
+ // Anori-style JD noise. "developer productivity/SDLC" ports 1:1 (same
+ // curated-fragment-in-a-slash-compound shape as "shell/power" above; the
+ // Python engine's "sdlc" curated term doesn't even exist in this app's
+ // KEYWORD_DB — a separate, pre-existing gap, not part of this port).
+ // The Python side's "cd excellence" (orphan tail of "CI/CD Excellence:")
+ // does NOT port as that 2-word phrase: this engine's proper-noun run
+ // requires Title-Case (`^[A-Z][a-z]{2,}$`), so all-caps "CI/CD" never
+ // starts a run at all, and "Excellence" surfaces alone instead — a
+ // different-shaped version of the same root cause. Stoplisted as the
+ // bare word it actually leaks as.
+ "productivity/sdlc","excellence"]);
 ["مهارات التواصل","التواصل","العمل الجماعي","روح الفريق","العمل ضمن فريق","القيادة","حل المشكلات",
  "إدارة الوقت","الاهتمام بالتفاصيل","التفكير النقدي","المرونة","الإبداع","الدافعية","الالتزام",
  "الأمانة","العمل تحت الضغط","التعامل مع ضغط العمل","بناء العلاقات","التفكير الاستراتيجي",

@@ -691,6 +691,43 @@ noise leak (previously observed on Talkiatry's own JD, harmless there since
 `measured`/`success` don't crowd out any genuine dynamic phrase in that
 document).
 
+### 3.15 2026-07-24 sync: a tenth real-world JD (Anori) — one phrase ports
+1:1, the other surfaces as a different shape entirely
+
+Anori: 100% curated (16/16) but 0/3 dynamic phrases, tanking the harmonic
+mean to 65.0% on the Python side despite the resume genuinely covering
+everything real in the JD. Two of the three were noise:
+
+- **`productivity/sdlc`** — from "developer productivity/SDLC". Ports 1:1:
+  same curated-fragment-in-a-slash-compound shape as the existing
+  `shell/power` entry. Added to `SOFT_SKILLS`. (Note: the Python engine's
+  `sdlc` curated term doesn't exist anywhere in this app's `KEYWORD_DB` — a
+  separate, pre-existing gap discovered along the way, not part of this
+  port and not fixed here.)
+- **`cd excellence`** — the Python side's orphan tail of "CI/CD Excellence:"
+  (`ci/cd` already curated, leaving "CD Excellence" as a 2-word leftover
+  run). Does **not** port as that phrase: this engine's proper-noun run
+  requires Title-Case (`^[A-Z][a-z]{2,}$`), so the all-caps "CI/CD" never
+  starts a run in the first place — the chain instead starts fresh at
+  "Excellence", surfacing as a **bare single word**, not a 2-word phrase.
+  Verified with a scratch Node harness (`extractDynamicPhrases` on the
+  Anori JD text) before deciding what to stoplist — confirmed `excellence`
+  alone leaks, not `cd excellence`. Added `excellence` to `SOFT_SKILLS`
+  instead of porting the Python string verbatim.
+
+The third missing phrase, **`elt`** (from "Modern Data Stack: Experience
+with ELT orchestration tools"), is a genuine gap on the Python side — no
+ETL/ELT/data-pipeline experience anywhere in the base resume. It needed no
+action here at all: this engine's proper-noun regex only matches Title-Case
+words, so the all-caps "ELT" never gets extracted as a phrase in the first
+place. It's simply invisible rather than noise — a structural blind spot
+for acronym-shaped genuine skills too, not something this fix introduced or
+could regress, and out of scope to address here.
+
+Verified post-fix with the same scratch Node harness: `phraseOk("excellence")`
+and `phraseOk("productivity/sdlc")` both now return `false`, and
+`extractDynamicPhrases` on the full Anori JD snippet no longer yields either.
+
 ---
 
 ## 4. AI layer — engineering decisions
