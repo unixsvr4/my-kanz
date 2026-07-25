@@ -728,6 +728,73 @@ Verified post-fix with the same scratch Node harness: `phraseOk("excellence")`
 and `phraseOk("productivity/sdlc")` both now return `false`, and
 `extractDynamicPhrases` on the full Anori JD snippet no longer yields either.
 
+### 3.16 2026-07-25 sync: an eleventh real-world JD (HII) — most of the
+Python fix turns out to already not apply here
+
+HII: 100% of the real requirements genuinely met but 39.9% FAIL on the
+Python side, dragged down by 10 dynamic-phrase false positives. Verified
+each one against this engine's actual extraction (scratch Node harness,
+same method as §3.15) before touching anything — most needed no porting at
+all, because this engine's shapes are already stricter or already cover the
+case:
+
+- **`travis-ci`** — a genuinely uncurated CI tool (Travis CI) sitting beside
+  two already-curated siblings (`jenkins`, `gitlab`) in the same
+  "(e.g. Gitlab-CI, Travis-CI, Jenkins, etc.)" list. Ported the same way as
+  the Python side: added `"travis ci": ["travis-ci", "travis ci",
+  "travisci"]` to `KEYWORD_DB`'s CI/CD & Automation category, rather than
+  stoplisting it — the resume's lack of Travis CI experience should cost a
+  curated-tier miss, not a dynamic-tier one.
+- **`distribution`** — from "Cloudera's Distribution of Hadoop". Ports 1:1:
+  the possessive apostrophe and lowercase "of" fragment the run down to the
+  bare word "Distribution" here exactly as they do in the Python engine.
+  Added to `SOFT_SKILLS`.
+- **`columbia`** — the office location ("Columbia, MD"). Ports 1:1 into the
+  existing `CITY_NOISE` gazetteer (this engine's `_CITY_NOISE` equivalent).
+
+Everything else needed **no action**, verified structurally invisible or
+already handled rather than assumed:
+
+- **`enlighten`** (the actual hiring brand — HII's Mission Technologies
+  division) is caught **automatically** by `employerTerms`'s "At `<Brand>`,
+  we/our/you" pattern (`At Enlighten, our team's unwavering work ethic…`) —
+  a self-reference convention this engine's `employerTerms` already checks
+  for that the Python engine's `_employer_terms` does not. No stoplisting
+  needed; confirmed via the harness that `employerTerms(jd)` already
+  contains `"enlighten"` on the unmodified file.
+- **`mid-senior`**, **`travis-ci`** (as a bare hyphenated token, before
+  curating it), **`dod`**, **`disa`**, **`mapr`** are all structurally
+  invisible: this engine's proper-noun regex (`^[A-Z][a-z]{2,}$`) requires
+  an all-lowercase tail after the leading capital, so any word with an
+  internal capital (`DoD`, `MapR`) or that's ALL-CAPS (`DISA`) never
+  matches, and a hyphen isn't whitespace, so `Mid-Senior`/`Travis-CI` never
+  start a Title-Case run at all. None of these ever reach the dynamic pool
+  here — confirmed absent from `extractDynamicPhrases(jd)` output on the
+  unmodified file.
+- **`diploma`** is absorbed even more thoroughly than the above: this
+  engine's word-merge loop welds the full run "High School Diploma"
+  together in one pass (no Python-side "OR"-before-a-capitalized-word
+  truncation quirk splitting it down to a bare last word), and `phraseOk`'s
+  per-part stopword check rejects the WHOLE 3-word phrase the moment `high`
+  trips it — `diploma` alone never surfaces.
+- **`mid`** / **`travis`** (the Python-side bare halves left over once the
+  longer phrases are filtered) never applied here in the first place, since
+  the longer phrases were never extracted to begin with.
+
+Left alone as genuine gaps (same call as the Python side): **`big data`**
+and **`hadoop`** (a real, if generic, tech category / specific distro the
+resume doesn't claim). Also discovered along the way, pre-existing and
+explicitly NOT fixed as part of this port (same category as `sdlc` in
+§3.15): **`maven`** and **`vmware`** are curated in the Python engine but
+don't exist anywhere in this app's `KEYWORD_DB` — a gap in the curated
+dictionary's breadth, unrelated to this round's noise fix.
+
+Verified post-fix with the same scratch Node harness: `CURATED_TOKENS.has(
+"travis-ci")` and `CURATED_TOKENS.has("travis ci")` both now return `true`,
+`SOFT_SKILLS.has("distribution")` and `CITY_NOISE.has("columbia")` both now
+return `true`, and re-running `extractDynamicPhrases` on the real
+`job_desc_hii.txt` text no longer yields any of the three.
+
 ---
 
 ## 4. AI layer — engineering decisions

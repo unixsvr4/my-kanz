@@ -340,6 +340,7 @@ const KEYWORD_DB = {
     "jenkins": ["jenkins"], "github actions": ["github actions"], "gitlab": ["gitlab", "gitlab ci"],
     "git": ["git", "version control"], "automation": ["automation", "automate", "automated", "الأتمتة"],
     "gitops": ["gitops"], "circleci": ["circleci"], "spinnaker": ["spinnaker"],
+    "travis ci": ["travis-ci", "travis ci", "travisci"],
   },
   "Infrastructure as Code": {
     "terraform": ["terraform", "opentofu", "terraform/opentofu"], "terragrunt": ["terragrunt"], "ansible": ["ansible"], "cloudformation": ["cloudformation"],
@@ -493,7 +494,7 @@ const US_STATES = new Set(["alabama","alaska","arizona","arkansas","california",
    deliberately absent: Java Spring.) */
 const CITY_NOISE = new Set(("nyc la sf brooklyn manhattan queens tribeca soho midtown hoboken boston austin chicago "
  + "seattle denver atlanta dallas houston philadelphia miami portland oakland sunnyvale cupertino redmond bellevue "
- + "reston columbus charlotte nashville minneapolis detroit pittsburgh baltimore raleigh durham tampa orlando "
+ + "reston columbus columbia charlotte nashville minneapolis detroit pittsburgh baltimore raleigh durham tampa orlando "
  + "sacramento boulder bethesda london dublin toronto vancouver montreal ottawa berlin amsterdam paris madrid "
  + "barcelona lisbon zurich warsaw krakow bangalore bengaluru hyderabad pune chennai mumbai gurgaon noida singapore "
  + "sydney melbourne tokyo dubai").split(" ").concat(["new york city","san francisco","san jose","san diego",
@@ -580,7 +581,21 @@ const SOFT_SKILLS = new Set(["communication","communication skills","verbal comm
  // starts a run at all, and "Excellence" surfaces alone instead — a
  // different-shaped version of the same root cause. Stoplisted as the
  // bare word it actually leaks as.
- "productivity/sdlc","excellence"]);
+ "productivity/sdlc","excellence",
+ // HII-round noise (job_desc_hii.txt). "Cloudera's Distribution of Hadoop"
+ // fragments to the bare word "Distribution" the same way it does in the
+ // Python engine: the possessive apostrophe and lowercase "of" break the
+ // Title-Case run on both sides. "mid-senior"/"travis-ci"/"dod"/"disa"/
+ // "mapr"/"diploma" needed NO action here — this engine's proper-noun regex
+ // (`^[A-Z][a-z]{2,}$`) requires an all-lowercase tail, so any word with an
+ // internal capital (DoD, MapR) or that's ALL-CAPS (DISA) never matches at
+ // all, and a hyphen isn't whitespace so "Mid-Senior"/"Travis-CI" never
+ // start a run either. "Diploma" is even more thoroughly absorbed: this
+ // engine's word-merge loop welds the full run "High School Diploma"
+ // together (no Python-style OR-before-a-capitalized-word truncation quirk),
+ // and phraseOk's per-part stopword check kills the WHOLE phrase once "high"
+ // trips it — never surfacing bare "diploma" at all.
+ "distribution"]);
 ["مهارات التواصل","التواصل","العمل الجماعي","روح الفريق","العمل ضمن فريق","القيادة","حل المشكلات",
  "إدارة الوقت","الاهتمام بالتفاصيل","التفكير النقدي","المرونة","الإبداع","الدافعية","الالتزام",
  "الأمانة","العمل تحت الضغط","التعامل مع ضغط العمل","بناء العلاقات","التفكير الاستراتيجي",
