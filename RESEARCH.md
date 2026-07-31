@@ -797,6 +797,57 @@ return `true`, and re-running `extractDynamicPhrases` on the real
 
 ---
 
+### 3.17 2026-07-31 sync: a twelfth real-world JD (UofC) — an "Application
+Documents" ATS checklist header leaks `resume/cv`
+
+University of Chicago Staff Platform Engineer posting: 39.9% -> 45.2% FAIL
+on the Python side despite every listed tool being genuinely covered once
+curated. Root cause: the ATS application checklist ("Application Documents /
+Resume/CV (required) / Cover Letter (preferred)") sits BEFORE this JD's "Pay
+Range" header, which the existing trailing-boilerplate cutter (`TAIL_HEADINGS`)
+already truncates at — just too late to catch this earlier section.
+
+Verified via the same scratch Node harness (extract `<script>`, stub
+`document`/`window`/`navigator`/`localStorage`, `require()` and call
+`prepJD`/`extractDynamicPhrases` directly) on both a synthetic snippet and
+the real `job_desc_uofc.txt` text: on the unmodified file, `resume/cv` (plus
+downstream fragments `application documents`, `letter`, `family`, `contributor`,
+`impact`, `rate type` — all Title-Case leftovers of the same unstripped tail)
+surfaced in `extractDynamicPhrases`'s output.
+
+Fixed by porting the exact same `_BOILERPLATE_TAIL_RE` addition from
+`my-resumes/ats_checking.py`: added `application documents` as a `TAIL_HEADINGS`
+alternative, right beside the existing `(?:hiring|interview|application)
+process` entry. Since this engine's tail-cut only reopens on a real
+`JOB_CONTENT` header (never seen again in the rest of a University-ATS
+posting — "Job Family", "Pay Rate Type", "Pay Range", the EEO statement are
+all boilerplate too), one header addition truncates the whole tail in one
+shot; no anchored-block or stoplist changes were needed.
+
+Re-ran the harness post-fix on the real JD: `resume/cv` and all downstream
+tail fragments are gone from `extractDynamicPhrases`'s output; `elb/alb`,
+`nist`, and `fips` (genuine dynamic phrases from earlier in the posting)
+are unaffected.
+
+NOT ported — out of scope for this round, a pre-existing breadth gap between
+the two engines' dynamic-phrase extraction (same bucket as `maven`/`vmware`
+in §3.16): this engine still surfaces `security frameworks`, `agile
+methodologies`, `dynamic language`, `subject matter expert`, and several
+single-word Title-Case fragments (`department`, `university`, `microsoft`,
+`amazon`, `bedrock`, `center`, `summary`, `production`, `learn`, `full`,
+`competencies`) that the Python engine's stricter proper-noun/sentence-
+boundary handling doesn't produce on the same text. None of these are
+caused by — or fixed by — the `Application Documents` header change; they're
+a separate, pre-existing divergence in overall extraction precision, not
+today's noise fix.
+
+The corresponding resume-content additions made on the Python side (adding
+`SVN`/`FIPS`/`Nginx`/`AWS ELB-ALB`/`Atlantis` to the candidate's actual base
+resume) have no analog here — this app scores whatever resume text a user
+pastes in, it doesn't own a resume of its own.
+
+---
+
 ## 4. AI layer — engineering decisions
 
 - **Transport**: raw `fetch` to `POST https://api.anthropic.com/v1/messages`

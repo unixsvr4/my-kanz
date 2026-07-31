@@ -705,6 +705,11 @@ const TAIL_HEADINGS = new RegExp("^(?:the |our )?(?:benefits?(?: (?:and|&) perks
  + "why join\\b.*|about (?:us|the company)|equal (?:employment )?opportunity(?: employer)?|eeo|"
  + "diversity(?: (?:and|&) inclusion)?|(?:hiring|interview|application) process|how to apply|legal|privacy|"
  + "additional information|notice at collection|(?:recruitment )?fraud (?:disclaimer|alert|notice|warning)|"
+ // University/HR-ATS "Application Documents" header (job_desc_uofc.txt) —
+ // introduces a "Resume/CV (required)" / "Cover Letter (preferred)"
+ // checklist that leaks "resume/cv" as a bogus dynamic phrase; ported from
+ // the same fix in my-resumes/ats_checking.py's _BOILERPLATE_TAIL_RE.
+ + "application documents|"
  + "shift|hours per week|"
  + "المزايا|المميزات|الرواتب والمزايا|كيفية التقديم|طريقة التقديم)\\s*:?\\s*$", "i");
 /* legal/eligibility paragraph OPENERS: work-auth is conventionally the last
