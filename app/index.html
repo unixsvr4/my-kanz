@@ -595,7 +595,20 @@ const SOFT_SKILLS = new Set(["communication","communication skills","verbal comm
  // together (no Python-style OR-before-a-capitalized-word truncation quirk),
  // and phraseOk's per-part stopword check kills the WHOLE phrase once "high"
  // trips it — never surfacing bare "diploma" at all.
- "distribution"]);
+ "distribution",
+ // 796-JD-corpus round (jd_noise_audit DF>=8 on the Python side). Only "argo"
+ // ports: it's a fragment of the already-curated "argocd" alias (line 331) —
+ // JDs narrate the umbrella CNCF Argo project ("the Argo ecosystem",
+ // "administering Argo projects (e.g., Argo CD, Argo Rollouts)") and this
+ // engine's proper-noun run captures the bare "Argo" the same way the Python
+ // engine's does (verified against job_desc_leaflink.txt/job_desc_akuity.txt).
+ // "wir"/"customer"/"crm"/"health" needed NO action here — none of them
+ // leaked in this engine even from realistic snippets: this engine's
+ // proper-noun extraction requires a Title-Case run (`^[A-Z][a-z]{2,}$`), so
+ // plain-lowercase prose words like "customer"/"health"/"crm"/the German
+ // pronoun "wir" are never captured as candidates at all, unlike the Python
+ // engine's separate all-lowercase skills-line/punctuated-token sources.
+ "argo"]);
 ["مهارات التواصل","التواصل","العمل الجماعي","روح الفريق","العمل ضمن فريق","القيادة","حل المشكلات",
  "إدارة الوقت","الاهتمام بالتفاصيل","التفكير النقدي","المرونة","الإبداع","الدافعية","الالتزام",
  "الأمانة","العمل تحت الضغط","التعامل مع ضغط العمل","بناء العلاقات","التفكير الاستراتيجي",
@@ -696,6 +709,37 @@ const JOB_CONTENT = new RegExp("^(?:the role|role overview|about the (?:role|job
  + "requirements|(?:minimum|basic|preferred) qualifications|qualifications|what you.?ll (?:do|bring|own)|"
  + "what we.?re looking for|who you are|skills?(?: (?:and|&) experience)?|"
  + "المسؤوليات|المهام|الواجبات|المتطلبات|الشروط|المؤهلات المطلوبة|المؤهلات|الوصف الوظيفي)\\s*:?\\s*$", "i");
+/* Bare "About <Company>" leading intro (e.g. "About AlphaSense" — not one of
+   INTRO_HEADINGS' generic "About Us"/"About the Company" forms). Ported from
+   the Python engine's _LEADING_ABOUT_COMPANY_RE: ONLY excised when it's the
+   first real content (see isLeadingMetadataPrefix below), so a mid-document
+   "ABOUT AWS" block sitting after Responsibilities (job_desc_aws_proserve.txt)
+   is never touched. Excludes "About the/us/our/this/your/.../role(s)/
+   opportunit*" so it can't swallow a real role-overview section. */
+const LEADING_ABOUT_COMPANY = new RegExp(
+  "^about\\s+(?!the\\b|us\\b|our\\b|this\\b|your\\b|these\\b|what\\b|how\\b|"
+  + "why\\b|working\\b|life\\b|career\\b|careers\\b|role\\b|roles\\b|opportunit)"
+  + "[a-z][a-z0-9.&'-]+\\s*:?\\s*$", "i");
+/* Is everything before a matched LEADING_ABOUT_COMPANY header just a job
+   title / company / posted-date preamble (get_linkedin_jobs.py's harvest
+   format, or a title line repeated after LinkedIn's "About the job" chrome —
+   job_desc_alphasense.txt), not real job content? Bounded tight (<=6 short,
+   header-free lines) so it can't misfire on real content ahead of a
+   MID-document About-header — job_desc_walgreens.txt's 20-line "Job
+   Summary:" block, job_desc_instacart.txt's mission paragraph, or a
+   Responsibilities-then-"ABOUT AWS" sequence. */
+function isLeadingMetadataPrefix(lines, uptoIdx) {
+  // LinkedIn's "About the job" chrome line matches JOB_CONTENT's own "about
+  // the (?:role|job|position|opportunity)" alternative (a combined regex —
+  // unlike the Python engine, which keeps that chrome-recognizing pattern in
+  // a separate constant from the one bounding this excision). Treat it as
+  // invisible chrome here too, so it can't itself trip the real-header guard.
+  const pre = lines.slice(0, uptoIdx).map(l => l.trim()).filter(Boolean)
+    .filter(l => l.toLowerCase() !== "about the job");
+  if (pre.length > 6) return false;
+  if (pre.some(l => JOB_CONTENT.test(l))) return false;
+  return pre.every(l => l.length <= 120 && l.split(/\s+/).length <= 12);
+}
 /* [ \t]*:?\s*$ anchoring matters: "The Perks:" / "Benefits:" carry a trailing
    colon — a bare EOL anchor silently misses every such header. */
 const TAIL_HEADINGS = new RegExp("^(?:the |our )?(?:benefits?(?: (?:and|&) perks?)?|"
@@ -793,6 +837,17 @@ function prepJD(jd) {
   jd = jd.replace(/([a-z])\.(?=[A-Z][a-z])/g, "$1. ");
   jd = jd.replace(HASHTAG_WORD, " ");
   let lines = jd.split(/\r?\n/);
+
+  // 0) bare "About <Company>" leading intro (job_desc_alphasense.txt's "About
+  //    AlphaSense" narrating the Tegus acquisition) — excise up to the next
+  //    job-content header, only when it's the first real content.
+  {
+    const idx = lines.findIndex(l => LEADING_ABOUT_COMPANY.test(l.trim()));
+    if (idx >= 0 && isLeadingMetadataPrefix(lines, idx)) {
+      const end = lines.findIndex((l, k) => k > idx && JOB_CONTENT.test(l.trim()));
+      if (end > idx) lines.splice(idx, end - idx);
+    }
+  }
 
   // 1) labeled company-intro block ("The Company:", "About Us") — excise up to
   //    the next job-content header; the required boundary means this can never

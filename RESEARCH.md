@@ -848,6 +848,119 @@ pastes in, it doesn't own a resume of its own.
 
 ---
 
+### 3.18 2026-08-01 sync: a thirteenth real-world JD (AlphaSense) — this engine
+had NO leading-"About &lt;Company&gt;" excision at all, plus a corpus-wide DF>=8 sweep
+
+The 796-JD corpus's growth (up from ~672 at §3.16/3.17) triggered a fresh
+`jd_noise_audit.py` pass on the Python side, which surfaced two categories of
+fix: a specific leak from `job_desc_alphasense.txt` (AlphaSense's "About
+AlphaSense" intro narrates its 2024 acquisition of Tegus by name, leaking
+`tegus` as a bogus Title-Case dynamic phrase) and five DF>=8 recurring noise
+phrases (`wir`, `customer`, `crm`, `argo`, `health`) plus a job-title/role
+word (`evangelist`) the audit's own document-frequency principle flags as
+boilerplate, not company-specific skills.
+
+**The `tegus` leak was a bigger structural gap here than in §3.17.** The
+Python fix generalized `_LEADING_ABOUT_COMPANY_RE`'s "first real content"
+check (it only fired when the text before a bare `About <Company>` header was
+exactly `""` or `"about the job"`) to also allow a short title/metadata
+preamble via a new `_is_leading_metadata_prefix` helper. But this engine had
+**no equivalent of `_LEADING_ABOUT_COMPANY_RE` at all** — `INTRO_HEADINGS`
+only recognizes the generic literal forms ("About Us", "About the Company"),
+never a bare company NAME ("About AlphaSense"). So this wasn't a narrow
+one-line port; it required adding the whole mechanic fresh.
+
+Verified via the usual scratch Node harness (extract `<script>`, stub
+`document`/`window`/`navigator`/`localStorage`/`performance`, `require()` and
+call `prepJD`/`extractDynamicPhrases` directly). Confirmed pre-fix:
+`extractDynamicPhrases` on the real `job_desc_alphasense.txt` text yielded
+`founded`, `rancher`, and `tegus` — the intro paragraph leaking straight
+through untouched.
+
+Fixed by adding, ported 1:1 in spirit from the Python side:
+- `LEADING_ABOUT_COMPANY` — a regex matching a bare `About <Word>` header,
+  excluding the same generic-word negative lookahead
+  (`the|us|our|this|your|these|what|how|why|working|life|career|careers|
+  role|roles|opportunit`) as `_LEADING_ABOUT_COMPANY_RE`.
+- `isLeadingMetadataPrefix(lines, uptoIdx)` — the guard mirroring
+  `_is_leading_metadata_prefix`: refuses to fire if the prefix has more than
+  6 non-blank lines, if any prefix line matches `JOB_CONTENT` (a real header
+  proves the job body already started), or if any line is longer than 120
+  chars / 12 words (real prose vs. a title/company/date label). This is what
+  keeps a mid-document "ABOUT AWS" block sitting after "Responsibilities"
+  (the exact `job_desc_aws_proserve.txt`-style case the Python docstring
+  warns about) from being nuked — verified with the same synthetic
+  Responsibilities-then-ABOUT-AWS snippet used in the Python test suite.
+- Wired into `prepJD` as a new step 0, before the existing `INTRO_HEADINGS`
+  loop, splicing out the header-to-next-`JOB_CONTENT` span exactly like that
+  loop already does for the labeled-header case.
+
+One divergence found and fixed during verification, not present on the
+Python side: this engine's `JOB_CONTENT` regex is a single combined pattern
+that ALSO matches LinkedIn's `"About the job"` chrome line (via its `"about
+the (?:role|job|position|opportunity)"` alternative) — Python keeps that
+chrome-recognizing pattern in a separate constant (`_JOB_CONTENT_START_RE`)
+from the one that bounds the leading-excision (`_JOB_CONTENT_HEADER`), so the
+chrome line never trips its own guard. Ported by having
+`isLeadingMetadataPrefix` explicitly treat an exact `"about the job"` line as
+invisible chrome before checking the rest against `JOB_CONTENT` — otherwise
+the alphasense JD's own `"About the job"` line was self-defeating the guard.
+
+Re-ran the harness post-fix: `tegus` (and `founded`, a harmless companion
+Title-Case pickup from the same sentence) are gone; `rancher` remains
+correctly present as a dynamic phrase (see below — it's not curated in this
+app's `KEYWORD_DB`, a separate pre-existing gap).
+
+**Corpus-wide diff, not just alphasense**: re-ran `extractDynamicPhrases`
+over all 796 `job_desc_*.txt` files before/after (via `git stash`/`git stash
+pop` to snapshot the pre-fix engine) to check for unintended fallout. 45
+files changed, and the change is a broad, unambiguous noise reduction — VC
+firm names, funding-round mentions, and brand narrative fragments dropped out
+of `job_desc_arca.txt`, `job_desc_assembled.txt`, `job_desc_clay.txt`,
+`job_desc_fora.txt`, `job_desc_klarity.txt`, `job_desc_kodi.txt`,
+`job_desc_plenful.txt`, `job_desc_ridecell.txt`, `job_desc_wolfellc.txt`, and
+others that all share the same "About &lt;Company&gt;" marketing-intro
+convention alphasense does. No file lost a phrase that looked like a genuine
+skill; the one addition worth checking (`job_desc_arca.txt` gained `one`,
+`job_desc_asrc_cde.txt` gained `sast`) turned out to be a real skill
+(`sast` = Static Application Security Testing, genuinely present in that
+JD's text) surfacing cleanly once the surrounding noise no longer disturbed
+the sentence-boundary split — not a regression.
+
+**The DF>=8 sweep — only `argo` needed a port.** Checked each of the five
+audit offenders against this engine with the scratch harness before touching
+anything (same "verify before fixing" discipline as every prior round):
+- `argo` DOES leak here, same root cause as the Python side — it's a
+  fragment of the already-curated `argocd` alias (`"argocd": ["argocd", "argo
+  cd"]`); JDs narrate the umbrella CNCF Argo project ("the Argo ecosystem",
+  "administering Argo projects (e.g., Argo CD, Argo Rollouts)") and the
+  Title-Case run sometimes captures the bare word alone. Confirmed against
+  the real `job_desc_leaflink.txt` and `job_desc_akuity.txt` text. Added
+  `"argo"` to `SOFT_SKILLS`.
+- `wir` (German "we"), `customer`, `crm`, `health` needed **no action** —
+  none leaked even from realistic snippets modeled directly on the corpus
+  text that trips them on the Python side. This engine's proper-noun
+  extraction requires a Title-Case run; plain-lowercase prose words are never
+  candidates at all here, unlike the Python engine's separate all-lowercase
+  skills-line and punctuated-token sources that catch them. Documented inline
+  next to the `"argo"` addition rather than silently skipped.
+- `evangelist` (the job-title/role word this round's other flagged item,
+  `"Evangelist of highly performant CI/CD practices…"`) also needed no
+  action here for the same structural reason: a single capitalized word
+  followed by a lowercase word never forms a multi-word Title-Case run, so it
+  was never a candidate phrase on this engine to begin with. Verified with a
+  targeted snippet; not added to `SOFT_SKILLS`.
+
+NOT ported — out of scope, same pre-existing-breadth-gap bucket as
+`maven`/`vmware` (§3.16) and the single-word Title-Case fragments (§3.17):
+`rancher` is curated in `KEYWORD_DB` on the Python side (added to the
+candidate's base resume this round — genuine MedAllies experience) but was
+never curated here, so it correctly still surfaces as an uncurated dynamic
+phrase in this app. Adding it to this app's `KEYWORD_DB` is a separate
+curated-breadth task, not a noise fix, and wasn't requested for this round.
+
+---
+
 ## 4. AI layer — engineering decisions
 
 - **Transport**: raw `fetch` to `POST https://api.anthropic.com/v1/messages`
