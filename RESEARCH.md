@@ -961,6 +961,151 @@ curated-breadth task, not a noise fix, and wasn't requested for this round.
 
 ---
 
+### 3.19 2026-08-01 sync: the "university-posting" JD family (pennstate,
+carnegie, stanford, uwisconsin) — four postings, four different noise shapes
+
+Same day as §3.18, the candidate flagged that the university/national-lab
+posting family fails broadly on noise, not just AlphaSense. Went through
+`job_desc_pennstate.txt` (Penn State ARL), `job_desc_carnegie.txt` (Carnegie
+Mellon), `job_desc_stanford.txt` (SLAC/Rubin Observatory, hosted at
+Stanford), and `job_desc_uwisconsin.txt` (UW-Madison) one at a time, fixing
+the Python side first (`my-resumes/ats_checking.py` — see that repo's commit
+history the same day) then re-verifying each fix against this engine with the
+scratch harness before porting, since the two engines' proper-noun
+extraction shapes diverge enough that assuming symmetry has been wrong in
+every prior round.
+
+**pennstate**: government/defense security-clearance boilerplate (ARL's
+"Unclassified, Controlled Unclassified Information (CUI), and Classified
+information" paragraph; "the Navy, the Intel Community (IC)") plus a Workday
+application-instructions "CURRENT PENN STATE STUDENT" block. `ic`/`cui`/
+`student` need **no action** here — all-caps acronyms never match this
+engine's Title-Case-with-lowercase-tail proper-noun regex, and "STUDENT"
+(also all-caps) doesn't either. `classified`/`unclassified` DID need porting,
+but the same whack-a-mole pattern the Python side hit (§3.18's `sast`
+addition, `job_desc_arca.txt`'s `one`) recurred here twice over: filtering
+the compound "Controlled Unclassified Information" un-masked the standalone
+word underneath it, so both the phrase AND its bare word needed a
+`SOFT_SKILLS` entry. Also added: `applied research laboratory` (ARL's own
+name — same "filename-derivation misses the sub-brand" bucket as HII's
+"Enlighten" in §3.16), `checks/clearances`, `intel community`, `navy`,
+`workday` (this app had no equivalent of the Python `NOISE_PHRASES`
+ATS-platform-name bucket — greenhouse/lever/bamboohr/workday), and a run of
+plain capitalized sentence-starters this engine has no defense against at
+all (`please`, `employees`, `professional`, `personal`, `notice`, `out`,
+`u.s`) plus the hyphen-broken "Cloud-Native Computing Foundation" fragment
+(`foundation`) and a CI/CD double-count (`delivery`, `integration/continuous`
+— see below, this pair needed a second round).
+
+**carnegie**: `TAIL_HEADINGS` had no entry for the "Location / Job Function /
+Position Type / Full Time-Part time / Pay Basis" ATS metadata-field block
+trailing the real content, so its slash-compound VALUES
+("Software/Applications Development/Engineering", "Full Time/Part time")
+leaked whole; ported the Python side's matching `_BOILERPLATE_TAIL_RE`
+addition (`job function|position type|pay basis`). Also: `cmu` (self-
+reference the filename-derived `carnegie` employer term misses, same bucket
+as `arl`/`enlighten`), and an unbulleted "Additional perks include a free
+Pittsburgh Regional Transit bus pass…" prose sentence with no
+insurance/401k/PTO anchor keyword for the existing `BENEFITS_LINE`
+mechanism to key off — ported the Python side's `perks? include` addition
+(this engine folds that into `BENEFITS_LINE` itself rather than a separate
+preamble regex, since `BENEFITS_LINE`'s "keyword to end-of-line" replace
+already gets the same result here). `therefore` and `apply` — capitalized
+sentence-starters ("Therefore, we are in search…", "Apply today!") — round
+out the noise; carnegie went from leaking noise on nearly every phrase to a
+clean extraction.
+
+**stanford**: SLAC/Vera-C.-Rubin-Observatory/LSST project-specific jargon —
+`data management`/`dm` (the "Data Management (DM) team" name), `prompt
+processing framework`, `rubin observatory`/`vera`/`rubin` (astronomer Vera
+Rubin's name, fragmenting the same way company names do), `lsst`'s own
+expansion "Legacy Survey of Space and Time" breaking at the stopwords
+"of"/"and" into `legacy survey` + `space` + `time` (three separate fragments
+of one name — `lsst` itself never leaks, all-caps), `slac national
+accelerator` + `laboratory` (the 4-word org name overrunning this engine's
+Title-Case run cap the same way `applied research laboratory` didn't for
+pennstate — different cap length, same failure mode), and `pacific time`
+(a timezone reference). Also found a **new structural gap**: a "SLAC
+Employee Competencies" section (one-liner soft-skill definitions like
+"Effective Decisions: Uses job knowledge...") doesn't fit this engine's
+existing anchored-run stripper (`stripAnchoredRuns`, which only strips lines
+that are JUST the soft-skill phrase — this JD's lines carry colon +
+explanation prose on the same line). Rather than build a second stripper
+shape, added `(?:\w+\s+)?employee competencies` to `TAIL_HEADINGS` — it
+fires earliest in the document and its cut-to-EOF absorbs the whole
+downstream tail in one shot: the competency list itself, an ADA
+physical-demands "Physical Requirements And Working Conditions" section, and
+an HSPD-12/PIV federal-background-investigation "Work Standards" section.
+Also added `physical requirements(?: (?:and|&) working conditions)?` and
+`work standards` to `TAIL_HEADINGS` directly, for JDs that carry either
+section without a preceding "Employee Competencies" header. Left `keda`
+(Kubernetes Event-Driven Autoscaling), `redis streams`, and `influxdb`
+untouched — real technologies genuinely absent from the base resume, not
+noise; stanford's score improves but correctly stays below the pass
+threshold on the Python side for the same reason.
+
+**uwisconsin**: UW-Madison's own division/program/cert-body acronyms
+(`uw`, `doit`, `regulated research`, `research cyberinfrastructure` +
+bare `cyberinfrastructure` — the same whack-a-mole as
+classified/unclassified above — `ssp`, `universities`, `c3pao`, `cmmc`,
+`cto office`), `controlled unclassified information` (a clean 3-word
+Title-Case run here, unlike pennstate's comma-broken phrasing — same
+literal string, needed the same `SOFT_SKILLS` entry independently),
+`payable/reimbursable`, `per university` (capitalized only because "Per"
+opens its sentence), and a batch of ATS field-label residue: "Job
+Category:"/"Job Profile:"/"Job Summary:" each orphan `category`/`profile`/
+`summary` the same way pennstate's "Job Description" orphaned `description`
+— the label word "Job" is itself a STOPWORD, breaking the 2-word run and
+leaving only the field name. Also `level` and the sentence-starters `while`/
+`division` (the last one is a straight port of the Python `SOFT_SKILL_STOPLIST`
+"generic org-structure noun, same bucket as department" addition — missed
+in the first pass of this round and caught by the corpus-wide diff, below).
+`serves` ("Serves as technical lead…") needed a `RESP_VERBS` addition
+(`serve`, plus `produce` proactively for the same un-covered-inflection
+class) — ported from the matching Python `_RESP_VERB_OPENERS` addition.
+
+**Curated-parity fix, not noise**: `cybersecurity` was missing as an alias
+of the `security` canonical in this engine's `KEYWORD_DB` (the Python side
+already has `"security": ["security", "cybersecurity"]`) — added it. This
+is a genuine alias-coverage gap, not a noise bug; low-risk since it only
+*adds* a curated match, never removes one.
+
+**Corpus-wide diff caught one true regression and confirmed the rest were
+benign.** Same `git stash`/`git stash pop` before/after methodology as
+§3.18, run over all ~799 corpus files. `git diff` showed 8 files newly
+leaking a *bare* `continuous` — tracked to `integration/continuous`'s fix
+above: filtering that garbled slash-fragment un-masks a second, independent
+`Continuous` Title-Case word surviving elsewhere in the same sentence
+("Continuous Integration/Continuous Development (CI/CD)" — the first
+"Continuous Integration" becomes the fragment, the second "Continuous"
+survives alone). Added bare `continuous` to `SOFT_SKILLS`; re-diffing then
+surfaced the companion fragment `integration` in one further file
+(`job_desc_planitgroupllc.txt`'s "Integration application security testing
+tools…" bullet opener) — added that too, and the diff came back clean of
+`continuous`/`integration` entirely.
+
+The remaining diff noise (`falco` in `job_desc_amtrak.txt`, `dast` in
+`job_desc_asrc_cde.txt`, `swift` in `job_desc_walgreens.txt`, plus a handful
+of single-letter/number artifacts — `n3`, `ma`, `number`, `clear`, `coast`,
+`$90`) is **not a regression**: `extractDynamicPhrases` caps its return at
+the top 40 candidates by string length (`kept.slice(0, 40)`), and none of
+these three real technology names (`falco`, `dast`, `swift` — none curated
+in this app's `KEYWORD_DB`, a separate pre-existing curation-breadth gap,
+same bucket as `rancher` in §3.18) changed at the line level when tested in
+isolation (confirmed with the harness — identical before/after output for
+the exact sentence each appears in). Removing genuine noise elsewhere in
+each of those documents freed up slots in the top-40 cap that these
+previously-truncated real candidates now fill. Not chased further — it's
+the cap doing its job, not a bug introduced this round.
+
+NOT ported — out of scope, same bucket as `rancher` in §3.18: `keda` and
+`falco`/`dast`/`swift` are real technologies missing from this app's
+`KEYWORD_DB` (Python already curates `falco`/`sast`/`dast` under
+"Compliance & Security" and `swift` presumably elsewhere). Curated-breadth
+parity is a separate task from this round's noise cleanup.
+
+---
+
 ## 4. AI layer — engineering decisions
 
 - **Transport**: raw `fetch` to `POST https://api.anthropic.com/v1/messages`

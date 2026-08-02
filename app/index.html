@@ -396,7 +396,7 @@ const KEYWORD_DB = {
     "windows": ["windows server", "windows"], "bgp": ["bgp"], "cilium": ["cilium"], "vlan": ["vlan", "vlans"],
   },
   "Security & Compliance": {
-    "security": ["security", "devsecops", "الأمن", "الأمن السيبراني"], "encryption": ["encryption", "tls", "ssl", "التشفير"],
+    "security": ["security", "cybersecurity", "devsecops", "الأمن", "الأمن السيبراني"], "encryption": ["encryption", "tls", "ssl", "التشفير"],
     "compliance": ["compliance", "soc 2", "soc2", "hipaa", "pci", "payment card industry", "fedramp", "الامتثال"],
     "pii": ["pii", "personally identifiable information", "معلومات التعريف الشخصية"],
     "vault": ["vault", "secrets management", "secrets"],
@@ -473,7 +473,7 @@ const STOPWORDS = new Set(("a an and or of to in for with on at by the is are wa
 const RESP_VERBS = new Set(("develop manage lead run own drive partner collaborate design build implement create "
  + "maintain support deliver define evaluate conduct guide enable oversee coordinate execute establish improve "
  + "optimize monitor analyze report champion architect automate embrace participate provide ensure "
- + "formulate supervise construct investigate compile pinpoint pursue discover test").split(" "));
+ + "formulate supervise construct investigate compile pinpoint pursue discover test serve produce").split(" "));
 function respVerb(w) {
   if (RESP_VERBS.has(w)) return true;
   for (const suf of ["es", "s"]) if (w.endsWith(suf) && RESP_VERBS.has(w.slice(0, -suf.length))) return true;
@@ -608,7 +608,87 @@ const SOFT_SKILLS = new Set(["communication","communication skills","verbal comm
  // plain-lowercase prose words like "customer"/"health"/"crm"/the German
  // pronoun "wir" are never captured as candidates at all, unlike the Python
  // engine's separate all-lowercase skills-line/punctuated-token sources.
- "argo"]);
+ "argo",
+ // Pennstate-round noise (job_desc_pennstate.txt, ARL government-clearance
+ // paragraph + Workday application-instructions boilerplate). "ic"/"cui"/
+ // "student" needed NO porting: this engine's proper-noun regex
+ // (`^[A-Z][a-z]{2,}$`) requires a lowercase tail, so all-caps acronyms (IC,
+ // CUI) never match, and "STUDENT" (all-caps) never forms a candidate either
+ // — verified empirically against the full JD text, not just the Python-side
+ // leak list. "classified"/"unclassified" DID need porting, but only surface
+ // once the longer runs below are filtered: "Controlled Unclassified
+ // Information" and "Unclassified, Controlled..." each subsume the bare
+ // words at extraction time, so filtering the longer phrase alone unmasks
+ // the standalone word underneath it (classic whack-a-mole — same reason
+ // this stoplist needs both the compound AND its parts here).
+ "applied research laboratory", "unclassified information", "unclassified",
+ "classified",
+ "checks/clearances", "intel community", "navy",
+ // "Workday" (the ATS platform naming its own login flow) — same bucket as
+ // the Python engine's NOISE_PHRASES "greenhouse"/"lever"/"bamboohr" entries.
+ "workday",
+ // Generic capitalized sentence-starters this engine's proper-noun run has
+ // no defense against (a lone Title-Case word at the start of a sentence
+ // looks identical to a real proper noun): "Please do not apply here",
+ // "Employees must be eligible...", "...(ARL) - Professional, this position
+ // requires...", "Personal electronic devices...", "...Notice to Out of
+ // State Applicants". None is a skill under any reading.
+ "please", "employees", "professional", "personal", "notice", "out", "u.s",
+ // "Foundation" — _PROPER_RE-equivalent run breaks "Cloud-Native Computing
+ // Foundation" at the hyphen the same way it does in the Python engine
+ // (see "distribution" above for the same fragmentation family); "cloud
+ // native" itself is already curated and matched separately.
+ "foundation",
+ // "Delivery" — bare fragment of "continuous integration and continuous
+ // delivery (CI/CD)"; the real skill is the already-curated "ci/cd".
+ // "integration/continuous" is the sibling garbled cross-word grab from the
+ // same sentence (the "and" between the two "continuous"s gets swallowed).
+ "delivery", "integration/continuous",
+ // "Continuous" — bare fragment of "Continuous Integration"/"Continuous
+ // Delivery"/"Continuous Development" once the adjacent word is stripped
+ // (e.g. "integration/continuous" above) or a SECOND "Continuous" in the
+ // same sentence survives on its own ("Continuous Integration/Continuous
+ // Development (CI/CD)"). The real skill is the already-curated "ci/cd".
+ // "Integration" is the companion fragment — a bullet-leading capitalized
+ // "Integration application security testing tools…" survives once its
+ // own CI/CD-context siblings are filtered elsewhere in the corpus.
+ "continuous", "integration",
+ // University-JD round (carnegie/stanford/uwisconsin) — the same posting
+ // family as pennstate above, same root causes: org self-reference
+ // acronyms, project-specific proper nouns, and generic ATS field-label /
+ // sentence-starter words this engine's Title-Case proper-noun run has no
+ // defense against.
+ // carnegie: "Additional perks include a free Pittsburgh Regional Transit
+ // bus pass…" ports below (BENEFITS_LINE); "Therefore, we are in search…"
+ // and "Apply today!" are capitalized sentence-starters, same family as
+ // pennstate's "please"/"notice" above. "Job Function"/"Position Type"/
+ // "Pay Basis" (TAIL_HEADINGS, below) absorbs the field VALUES too
+ // ("Software/Applications Development/Engineering", "Full Time/Part
+ // time", "Staff – Regular").
+ "therefore", "apply",
+ // stanford: SLAC/Rubin-Observatory/LSST project jargon (same "internal
+ // proper noun, never a personal skill" bucket as the Python engine's
+ // matching entries) — "Description" is the orphaned half of "Job
+ // Description" once "Job" (a STOPWORD) breaks the run; "Employee
+ // Competencies" (TAIL_HEADINGS, below) absorbs "Decisions"/"Flexes" by
+ // removing the whole competency-list section they come from.
+ "prompt processing framework", "rubin observatory", "vera", "rubin",
+ "legacy survey", "space",
+ // "Time" is the tail fragment of "Legacy Survey of Space and Time" (LSST's
+ // own expansion) orphaned by the stopword "and" breaking the run, the same
+ // fragmentation as "Space" above; "Pacific Time" (a timezone reference,
+ // "typically 2-5pm Pacific Time") is a separate, unrelated occurrence that
+ // needs its own exact-phrase entry once the bare word is stoplisted.
+ "time", "pacific time", "description",
+ // uwisconsin: UW-Madison's own division/program/cert-body acronyms and
+ // internal team names, plus ATS field-label residue ("Job Category:"/
+ // "Job Profile:"/"Job Summary:" each orphan their value word the same
+ // "Job" + STOPWORD-break way "Job Description" does above) and more
+ // capitalized sentence-starters.
+ "controlled unclassified information", "research cyberinfrastructure",
+ "cyberinfrastructure", "payable/reimbursable", "regulated research",
+ "per university", "universities", "cto office", "category", "profile",
+ "summary", "level", "while", "division"]);
 ["مهارات التواصل","التواصل","العمل الجماعي","روح الفريق","العمل ضمن فريق","القيادة","حل المشكلات",
  "إدارة الوقت","الاهتمام بالتفاصيل","التفكير النقدي","المرونة","الإبداع","الدافعية","الالتزام",
  "الأمانة","العمل تحت الضغط","التعامل مع ضغط العمل","بناء العلاقات","التفكير الاستراتيجي",
@@ -744,7 +824,13 @@ function isLeadingMetadataPrefix(lines, uptoIdx) {
    colon — a bare EOL anchor silently misses every such header. */
 const TAIL_HEADINGS = new RegExp("^(?:the |our )?(?:benefits?(?: (?:and|&) perks?)?|"
  + "perks?(?: (?:and|&) (?:benefits?|culture))?|"
- + "compensation(?: (?:and|&) benefits?| philosophy| information| range| package)?|salary(?: range| information)?|"
+ + "compensation(?: (?:and|&) benefits?| philosophy| information| range| package)?|"
+ // "Salary & Benefits" (job_desc_pennstate.txt): the combined header wasn't
+ // covered, so the cut never triggered and everything past it (the Clery-Act
+ // campus-security disclosure, EEO block) flowed straight into extraction —
+ // ported from the already-working "and|&...Benefits?" branch on the
+ // Python engine's _BOILERPLATE_TAIL_RE ("Salary\s+(?:and|&|Range|Information)").
+ + "salary(?: (?:and|&) benefits?| range| information)?|"
  + "pay(?: range| transparency)?|total rewards?|how we pay|what we offer|what you.?ll (?:love|get|enjoy|receive)|"
  + "why join\\b.*|about (?:us|the company)|equal (?:employment )?opportunity(?: employer)?|eeo|"
  + "diversity(?: (?:and|&) inclusion)?|(?:hiring|interview|application) process|how to apply|legal|privacy|"
@@ -755,6 +841,23 @@ const TAIL_HEADINGS = new RegExp("^(?:the |our )?(?:benefits?(?: (?:and|&) perks
  // the same fix in my-resumes/ats_checking.py's _BOILERPLATE_TAIL_RE.
  + "application documents|"
  + "shift|hours per week|"
+ // Job-board ATS metadata-field labels (job_desc_carnegie.txt: "Location /
+ // Job Function / Position Type / Full Time-Part time / Pay Basis" fields
+ // trailing the real job content) — ported from the matching addition to
+ // the Python engine's _BOILERPLATE_TAIL_RE.
+ + "job function|position type|pay basis|"
+ // HR competency-taxonomy header (job_desc_stanford.txt: "SLAC Employee
+ // Competencies" introduces a list of one-liner soft-skill definitions
+ // whose shape — colon + explanation prose on the SAME line — doesn't fit
+ // the existing anchored-run stripper (step 4 below), which only strips
+ // lines that are JUST the soft-skill phrase). Fires earliest, so this one
+ // trigger also absorbs the ADA physical-demands / "Work Standards"
+ // HSPD-12/PIV admin tail that follows it in the same document.
+ + "(?:\\w+\\s+)?employee competencies|"
+ // ADA physical-demands / HR "Work Standards" boilerplate — same bucket as
+ // "Accessibility" above; ported for JDs that carry this section WITHOUT a
+ // preceding "Employee Competencies" header.
+ + "physical requirements(?: (?:and|&) working conditions)?|work standards|"
  + "المزايا|المميزات|الرواتب والمزايا|كيفية التقديم|طريقة التقديم)\\s*:?\\s*$", "i");
 /* legal/eligibility paragraph OPENERS: work-auth is conventionally the last
    requirement, so truncating from the earliest marker removes the visa/EEO/
@@ -791,6 +894,12 @@ const BENEFITS_LINE = new RegExp("\\b(401\\s?\\(?k\\)?|pre[\\s-]?tax|dental|visi
  + "pto|sick (time|leave)|parental leave|maternity|paternity|baby bonding|tuition|"
  + "wellness (stipend|allowance|program)|gym membership|commuter benefits?|hsa|fsa|espp|stock options?|"
  + "equity package|sign-on bonus|(cell )?phone stipend|casual dress|paid holidays?|sabbatical|"
+ // "Additional perks include a free Pittsburgh Regional Transit bus
+ // pass…" (job_desc_carnegie.txt) — a flowing-prose perk sentence with no
+ // insurance/401k/PTO anchor keyword, so an unbounded perk-product/brand
+ // name (the transit agency here) leaks whole; ported from the matching
+ // addition to the Python engine's _BENEFITS_PREAMBLE_RE.
+ + "perks? include|"
  + "\\$\\s?\\d{2,3}[,\\d]*\\s*(-|–|to)\\s*\\$?\\s?\\d{2,3}[,\\d]*)\\b.*$", "i");
 /* post-ChatGPT interview-integrity disclaimer ("The use of ChatGPT or any
    other automated tool during the interview process will disqualify a
