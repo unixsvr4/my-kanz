@@ -688,7 +688,46 @@ const SOFT_SKILLS = new Set(["communication","communication skills","verbal comm
  "controlled unclassified information", "research cyberinfrastructure",
  "cyberinfrastructure", "payable/reimbursable", "regulated research",
  "per university", "universities", "cto office", "category", "profile",
- "summary", "level", "while", "division"]);
+ "summary", "level", "while", "division",
+ // Sezzle round (VP Eng Infra/SRE) — most of the Python-side noise fixes
+ // needed NO porting here at all, verified empirically (isolated-sentence
+ // harness tests, not assumed from symmetry): "risk-taking", "ai-boosted",
+ // "audit-readiness", "build-vs-buy", "high-severity", and "game-changing"
+ // are all all-lowercase hyphenated adjective phrases in the JD prose, and
+ // this engine's proper-noun run requires a capitalized first letter while
+ // its punctuated-token regex (`[./#+]`, no hyphen) doesn't match hyphens
+ // either — so none of these six can ever form as a candidate here, unlike
+ // the Python engine's continuous-text regex and separate skills-line/
+ // punctuated-token sources. Likewise "frontend" (bare) never surfaces: this
+ // engine's Title-Case scan starts at the SECOND word of every line
+ // (`for (let i = 1; ...)`), so a stack-section header naming its own first
+ // word ("Frontend: Typescript - React...") is structurally invisible to it.
+ // "version control" needed no porting either — it's already an alias of
+ // the curated "git" canonical in this app's KEYWORD_DB (unlike Python's,
+ // which doesn't have that alias), so it's credited as curated, not leaked
+ // as noise.
+ //
+ // What DID need porting, and in a different shape than Python's fix:
+ // "finance" (bare) ports 1:1 — capitalized in "...Engineering, Finance,
+ // and external auditors" (a department-name list), so it forms via the
+ // same Title-Case source Python's does. "partnerships/sponsorships" also
+ // ports 1:1 (business-development jargon, "bank partnerships/sponsorships,
+ // FFIEC examinations, GLBA"). But the on-call/incident and multi-az/multi-
+ // region double-counts fragment completely differently here: Python's
+ // punctuated-token regex includes hyphen as part of the leading word, so
+ // it captures the full "on-call/incident" and (via the Title-Case+merge
+ // fix) "multi-az/multi-region"; this engine's regex does NOT treat hyphen
+ // as part of a token, so the leading hyphenated half gets dropped entirely
+ // — producing the bare fragments "call/incident" and "az/multi" instead
+ // (verified against the actual JD, not an isolated snippet: an isolated
+ // one-line test produces a differently-shaped "multi-az/multi-region
+ // posture", proving this fragmentation is context-sensitive and the real
+ // full-JD output is what must be trusted). Adding "incident" alone (bare)
+ // wouldn't fix "call/incident" the way it does in Python — "call" was
+ // never itself curated, so the curated-padded-with-filler double-count
+ // rule can't reach it — so both are stoplisted as literal exact fragments
+ // instead, same bucket as the already-stoplisted "shell/power".
+ "finance", "partnerships/sponsorships", "call/incident", "az/multi"]);
 ["مهارات التواصل","التواصل","العمل الجماعي","روح الفريق","العمل ضمن فريق","القيادة","حل المشكلات",
  "إدارة الوقت","الاهتمام بالتفاصيل","التفكير النقدي","المرونة","الإبداع","الدافعية","الالتزام",
  "الأمانة","العمل تحت الضغط","التعامل مع ضغط العمل","بناء العلاقات","التفكير الاستراتيجي",

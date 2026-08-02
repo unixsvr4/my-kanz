@@ -1173,6 +1173,81 @@ in the diff output rather than sampling.
 
 ---
 
+### 3.21 2026-08-02 sync: a fourteenth real-world JD (Sezzle) — most of the
+Python-side marketing-jargon fixes need no porting at all
+
+Same round as §3.20's Google Pub/Sub fix; a candidate flagged that
+`job_desc_sezzle.txt` (a VP Eng Infra/SRE role, heavy on fintech-compliance
+and culture-values prose) scored 47.1% on the Python engine mostly from
+noise, not genuine gaps. The Python fix (that repo's commit `2939c1c`)
+stoplisted eleven items: `frontend`, `version control`, `incident` (bare),
+`finance`, and six marketing/business-jargon phrases (`risk-taking`,
+`game-changing`, `ai-boosted`, `audit-readiness`, `build-vs-buy`,
+`high-severity`), plus curated two real AWS services and `multi-az`.
+
+Checked each of the eleven against this engine one at a time — with an
+isolated-sentence harness test per item, not assumed from symmetry — and
+**seven needed no porting**:
+
+- `risk-taking`, `ai-boosted`, `audit-readiness`, `build-vs-buy`,
+  `high-severity`, `game-changing`: all six are all-lowercase hyphenated
+  adjective phrases in the JD's prose. This engine's proper-noun run
+  requires a capitalized first letter, and its punctuated-token regex
+  (`[./#+]`, no hyphen) doesn't treat hyphens as a valid mid-token
+  separator either — so none of the six can ever form as a dynamic-phrase
+  candidate here at all, structurally, regardless of stoplisting. Verified
+  empirically: isolated sentences containing each phrase produce zero
+  candidates.
+- `frontend` (bare): never surfaces either, for an unrelated reason — this
+  engine's Title-Case scan loop starts at the SECOND word of every line
+  (`for (let i = 1; ...)`), so a stack-section header naming its own first
+  word (`"Frontend: Typescript - React and React Native"`) is structurally
+  invisible to it.
+- `version control`: already covered — this app's `KEYWORD_DB` has
+  `"git": ["git", "version control"]` as an alias (the Python engine's
+  `"git"` canonical doesn't have that alias, which is why Python needed the
+  stoplist entry and this engine doesn't).
+
+**Four needed porting, and two of them in a different shape than Python's
+fix**: `finance` and `partnerships/sponsorships` port 1:1 (same
+department-name and business-jargon noise, both capturable by this
+engine's sources same as Python's). But the on-call/incident and
+multi-az/multi-region double-counts fragment completely differently here:
+Python's punctuated-token regex includes hyphen as part of the leading
+word, capturing the full `"on-call/incident"` and (via §3.20's merge fix)
+`"multi-az/multi-region"`; this engine's regex does NOT treat hyphen as
+part of a token, so the leading hyphenated half is dropped entirely —
+producing the bare fragments `"call/incident"` and `"az/multi"` instead.
+Confirmed against the actual full JD (not an isolated snippet — an
+isolated one-line test produces a differently-shaped `"multi-az/multi-
+region posture"`, proving the fragmentation is context-sensitive enough
+that only the real JD's output can be trusted). Porting bare `"incident"`
+the way Python did wouldn't have worked here either: Python's fix relies on
+the curated-padded-with-filler double-count rule (`on-call` curated +
+`incident` filler), but this engine's fragment is `"call/incident"` —
+`"call"` was never itself curated, so that rule can't reach it. Both
+fragments are stoplisted as literal exact strings instead, same bucket as
+the already-stoplisted `"shell/power"`.
+
+NOT ported — out of scope, a separate and much larger pre-existing noise
+surface specific to this JD's own fragmentation, unrelated to what the
+Python round fixed: `"canary/blue"` (garbled fragment of the already-
+curated-and-matched `"canary/blue-green"`), `"slos/error"` and
+`"dss/soc2"` (same garbled-cross-punctuation family), `"devops & cloud"`
+and `"languages"` (stack-section headers, same bucket as `"frontend"`
+above but a different root cause), plus generic single-word leaks
+(`"control"`, `"source"`, `"built"`, `"many"`, `"despite"`). None of these
+were part of the Python fix being ported, and chasing them now would be
+the same scope-creep risk flagged and deliberately deferred for the
+German-JD noise surface in §3.20.
+
+Corpus-wide diff (all `job_desc_*.txt`, before/after via `git stash`): 3
+files changed (`job_desc_sezzle.txt` plus two others where bare `"finance"`
+also correctly drops as the same department/industry-vertical noise), 0
+additions, 6 clean removals.
+
+---
+
 ## 4. AI layer — engineering decisions
 
 - **Transport**: raw `fetch` to `POST https://api.anthropic.com/v1/messages`
