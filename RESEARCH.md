@@ -1106,6 +1106,73 @@ parity is a separate task from this round's noise cleanup.
 
 ---
 
+### 3.20 2026-08-02 sync: the "Google Pub/Sub" double-count bug (structurally
+different fragmentation shape than the Python fix it ports)
+
+A candidate posting (`job_desc_branch.txt`, Branch — Senior SRE, Java/Spring
+Boot/GCP) surfaced a real scoring bug on the Python side, not just a low-fit
+resume: the dynamic-phrase extractor double-counted a single JD requirement
+as two overlapping fragments. `extract_jd_phrases_weighted`'s Title-Case
+source stops right where punctuation starts a following tech token, while
+its punctuated-token source independently captures that same token —
+"Google Pub/Sub" surfaced as **both** `"google pub"` (from the Title-Case
+run, truncated mid-compound) **and** `"pub/sub"` (from the punctuated-token
+regex), inflating the dynamic-phrase denominator and unfairly lowering the
+score twice for one gap. Fixed in `my-resumes/ats_checking.py` (see that
+repo's commit `b7530ca`) by merging such fragments back into one phrase,
+verified via text adjacency so unrelated phrases sharing a token never get
+merged. Confirmed via an 801-JD corpus diff on the Python side: 36 files
+improved (`aws elb/alb`, `azure ad/entra`, `red hat/centos/rocky`, etc.), no
+regressions.
+
+Porting to this engine needed a different merge shape, not a copy-paste,
+because the two engines' proper-noun extractors fragment differently at the
+exact same input — the divergence flagged as a recurring risk in every prior
+round (§3.19 above) held again. Python's `_PROPER_RE` matches greedily
+against the continuous text and can grab a **partial prefix** of the next
+token before hitting punctuation ("Google" + " Pub" match, then stop at
+the "/"  — yielding the 2-word fragment `"google pub"`). This engine's
+source-3 loop instead tests each whitespace-split token against a **fully
+anchored** regex (`/^[A-Z][a-z]{2,}$/`); "Pub/Sub" fails that test outright
+(no partial match), so the Title-Case run stops one word **earlier** and
+never touches "Pub" at all — yielding the bare 1-word fragment `"google"`.
+Confirmed empirically with the scratch Node harness (dumping every
+`add()` call) before writing the fix, rather than assuming the Python
+merge's "shared last-word/first-word" matching logic would transfer: it
+doesn't, because there's no shared word between `"google"` and `"pub/sub"`
+to key off of. The port instead checks direct text adjacency — for every
+punctuation-free candidate `A` and punctuated candidate `B`, if the literal
+string `A + " " + B` appears in the (lowercased) prepped JD text, merge them
+into one phrase, keeping the max of the two weights. This subsumes the
+Python case too (a multi-word `A` ending right before a punctuated `B`
+merges the same way) without needing the word-overlap check Python relies
+on, since this engine's fragments never overlap at all.
+
+Also ported: `"profile"` added to `RESP_VERBS` (line-leading imperative,
+same bucket as `"analyze"`/`"measure"` — a JD's "Profile and optimize
+platform performance…" bullet was leaking the bare verb as a phrase).
+
+**NOT ported**: the Python-side `"jahren"` addition to `SOFT_SKILL_STOPLIST`
+(German "years" filler, from the same corpus diff). Checked whether it was
+worth porting in isolation and it is not: this engine's dynamic-phrase
+output for German JDs (e.g. `job_desc_sherawerkstofftechnologiegmb.txt`) is
+already dominated by a much larger, pre-existing noise surface (raw
+scraper metadata like `www.arbeitnow.com/jobs/companies/shera` and
+timestamps, plus dozens of un-stoplisted German prose words) — the
+284-phrase DF≥5 gap flagged back in the Python session and deliberately
+left as an out-of-scope, separate initiative pending explicit direction.
+Adding one German filler word to a candidate list this noisy wouldn't be
+a meaningful fix on its own.
+
+Corpus-wide diff (all `job_desc_*.txt` at the repo root, before/after via
+`git stash`): 37 files changed, all consolidations of the same
+fragment-into-one-phrase shape (`"top secret/sensitive"`,
+`"red hat enterprise linux/se"`, `"cloud serverless components/managed"`,
+etc.) — no new noise introduced, verified by inspecting every changed file
+in the diff output rather than sampling.
+
+---
+
 ## 4. AI layer — engineering decisions
 
 - **Transport**: raw `fetch` to `POST https://api.anthropic.com/v1/messages`

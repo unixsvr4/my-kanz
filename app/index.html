@@ -473,7 +473,7 @@ const STOPWORDS = new Set(("a an and or of to in for with on at by the is are wa
 const RESP_VERBS = new Set(("develop manage lead run own drive partner collaborate design build implement create "
  + "maintain support deliver define evaluate conduct guide enable oversee coordinate execute establish improve "
  + "optimize monitor analyze report champion architect automate embrace participate provide ensure "
- + "formulate supervise construct investigate compile pinpoint pursue discover test serve produce").split(" "));
+ + "formulate supervise construct investigate compile pinpoint pursue discover test serve produce profile").split(" "));
 function respVerb(w) {
   if (RESP_VERBS.has(w)) return true;
   for (const suf of ["es", "s"]) if (w.endsWith(suf) && RESP_VERBS.has(w.slice(0, -suf.length))) return true;
@@ -1118,6 +1118,29 @@ function extractDynamicPhrases(jdRaw) {
       }
     }
   }
+  // Source 3's per-token regex requires a FULL match ("Pub/Sub" fails outright,
+  // unlike the Python engine's continuous-text regex which can grab a partial
+  // prefix), so a Title-Case run stops dead one word early and becomes its
+  // own bare fragment ("Google" from "Google Pub/Sub") while source 2
+  // independently captures "pub/sub" — the same JD phrase then double-counts
+  // as two overlapping candidates. Merge them back into one when they're
+  // verified adjacent in the actual text (not just because they coexist),
+  // so unrelated phrases never get merged.
+  const jdLower = jd.toLowerCase();
+  for (const aCand of [...weights.keys()].filter(k => !/[/.-]/.test(k))) {
+    if (!weights.has(aCand)) continue;
+    for (const bCand of [...weights.keys()]) {
+      if (bCand === aCand || !/[/.-]/.test(bCand)) continue;
+      const merged = aCand + " " + bCand;
+      if (jdLower.includes(merged)) {
+        weights.set(merged, Math.max(weights.get(merged) || 0, weights.get(aCand), weights.get(bCand)));
+        weights.delete(aCand);
+        weights.delete(bCand);
+        break;
+      }
+    }
+  }
+
   // drop substrings of longer captured phrases
   const keys = [...weights.keys()].sort((a, b) => b.length - a.length);
   const kept = [];
