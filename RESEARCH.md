@@ -1248,6 +1248,36 @@ additions, 6 clean removals.
 
 ---
 
+### 3.22 2026-08-05 sync: a fifteenth real-world JD (Teksystems/ADP) — one of two Python fixes needed porting
+
+`tailor_resume.py` on `job_desc_teksystems.txt` (ADP DevOps contract JD via
+Teksystems) scored 66.0% FAIL, dynamic 28.6% (2/7); missing phrases
+included `"additional notes"` and `"possible extension"` — both JD
+structure/logistics, not skills. The Python-side fix (`ats_checking.py`
+commit `194745e`) added both to `NOISE_PHRASES`: `"Additional Notes"` is
+the second half of that JD's `"Nice to Have / Additional Notes:"` section
+header (split off by the `/`), and `"Possible Extension"` is from
+`"Duration: 12 month contract (Possible Extension)"`.
+
+Ported by testing each phrase individually against this engine's real
+`extractDynamicPhrases()` output for the full JD text (never assumed
+symmetry with Python):
+
+- `"additional notes"` ports 1:1 — it forms as a Title-Case run the same
+  way here, and leaking from the same full-JD text, so it was added to
+  `SOFT_SKILLS` verbatim.
+- `"possible extension"` does NOT port. Verified against the actual full
+  JD (not just an isolated snippet) that it never forms a candidate here
+  at all — only an artificial standalone `"Possible Extension"` line
+  leaks the bare fragment `"extension"` in isolation, a shape that does
+  not occur in the real document, so nothing needed adding for it.
+
+Corpus-wide diff (all `job_desc_*.txt`, before/after via `git stash`): 1
+file changed (`job_desc_teksystems.txt`), 0 additions, 1 clean removal
+(`"additional notes"`).
+
+---
+
 ## 4. AI layer — engineering decisions
 
 - **Transport**: raw `fetch` to `POST https://api.anthropic.com/v1/messages`

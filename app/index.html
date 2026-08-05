@@ -727,7 +727,17 @@ const SOFT_SKILLS = new Set(["communication","communication skills","verbal comm
  // never itself curated, so the curated-padded-with-filler double-count
  // rule can't reach it — so both are stoplisted as literal exact fragments
  // instead, same bucket as the already-stoplisted "shell/power".
- "finance", "partnerships/sponsorships", "call/incident", "az/multi"]);
+ "finance", "partnerships/sponsorships", "call/incident", "az/multi",
+ // Teksystems-round noise (job_desc_teksystems.txt, ADP DevOps contract JD).
+ // "additional notes" ports 1:1 — it's the second half of that JD's "Nice to
+ // Have / Additional Notes:" section header (the Python engine's twin fix
+ // for this same JD), captured here as a Title-Case run the same way.
+ // "possible extension" (from "Duration: 12 month contract (Possible
+ // Extension)") does NOT port: verified against the actual full JD text (not
+ // just an isolated snippet) that it never forms a candidate at all here —
+ // only an artificial standalone "Possible Extension" line leaks the bare
+ // fragment "extension", a shape that doesn't occur in the real document.
+ "additional notes"]);
 ["مهارات التواصل","التواصل","العمل الجماعي","روح الفريق","العمل ضمن فريق","القيادة","حل المشكلات",
  "إدارة الوقت","الاهتمام بالتفاصيل","التفكير النقدي","المرونة","الإبداع","الدافعية","الالتزام",
  "الأمانة","العمل تحت الضغط","التعامل مع ضغط العمل","بناء العلاقات","التفكير الاستراتيجي",
