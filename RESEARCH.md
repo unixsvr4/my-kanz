@@ -1278,6 +1278,83 @@ file changed (`job_desc_teksystems.txt`), 0 additions, 1 clean removal
 
 ---
 
+### 3.23 2026-08-06 sync: the 889-JD-corpus curation round (entra id/slack/apache/sd-wan) — cascading collateral fragments, twice
+
+The Python engine's `test_corpus_has_no_recurring_dynamic_noise` regression
+test (fails when a non-curated phrase recurs in >=8 of the corpus JDs)
+started failing once the corpus grew to 885 files: `"entra id"` (9),
+`"slack"` (8), `"apache"` (8) — three genuine, recurring real-world tools
+that had never been curated. A separate live `tailor_resume.py` run on
+`job_desc_chromatic.txt` also flagged `"intermediate"` (a bare seniority
+qualifier, same bucket as the already-stoplisted senior/junior) and
+`"legal/compliance"` (a double-count padding the already-curated
+`"compliance"` with generic filler `"legal"`) as noise.
+
+The Python-side fix (`ats_checking.py` commit `4255903`) curated `"slack"`,
+`"apache"`, `"azure ad"` (with `"entra id"` as a 2023-rebrand alias — MSFT
+renamed Azure AD to Entra ID, JDs use both), and `"sd-wan"`; stoplisted
+`"intermediate"` and `"legal"`. Curating the two hyphen/slash compounds
+(`"azure ad/entra id"`, `"sd-wan"`) then exposed a **second-order** bug on
+the Python side via corpus-wide diff: their bare orphan halves (`"ad/entra"`,
+`"sd"`, `"wan"`) leaked once the whole compound they used to get subsumed
+under was filtered out before the subsumption pass ever ran — fixed with
+the existing `NOISE_PHRASES` orphan-fragment precedent (same bucket as
+`"route"`/`"ad"` from earlier rounds) plus one exact-alias addition.
+
+Ported by testing each fix individually against this engine's real
+`extractDynamicPhrases()` output for the actual affected JD text (never
+assumed symmetry — this engine's Title-Case regex requires
+`^[A-Z][a-z]{2,}$`, which structurally can't match ALL-CAPS runs like `AD`
+or `SD`/`WAN`, so the Python-side orphan-fragment bug does NOT recur here
+the same way):
+
+- `"slack"`, `"apache"` — leaked identically here (Title-Case/skill-list
+  extraction), ported as new `KEYWORD_DB` entries.
+- `"azure ad"` family — leaked in *more* shapes here than in Python
+  (`"entra"` bare, `"microsoft entra"`, `"microsoft entra id"`, plus the
+  `"ad/entra"` fragment via the punctuated-token source, which — unlike
+  Python — includes `/` in its punctuation class), so the ported alias
+  list is a superset of Python's: `["azure ad", "azuread", "entra id",
+  "entra", "microsoft entra", "microsoft entra id", "ad/entra"]`.
+- `"sd-wan"` — leaks here too, but as a *clean whole token* via the
+  skill-list source (comma-splitting keeps "SD-WAN" intact as one list
+  item), never fragmenting into bare "sd"/"wan" the way Python's
+  Title-Case-run mechanics do. Confirmed by direct search: no bare `"sd"`
+  or `"wan"` candidate exists in this engine's output for any of the
+  three affected JDs. **The Python-side orphan-fragment fix for `"sd"`/
+  `"wan"` does NOT port** — nothing to fix.
+- `"intermediate"` — does NOT port. This engine's Title-Case loop starts
+  at word index 1 (`for (let i = 1; i < words.length; i++)`), so a
+  line-leading capitalized word (like "Intermediate working knowledge…")
+  can never itself start a candidate run here. Verified absent from the
+  real JD's output entirely.
+- `"legal"` — ports 1:1 to `STOPWORDS`, and works *more directly* here
+  than in Python: this engine's `phraseOk` stopword check already splits
+  on `/./-` as well as spaces (`p.split(/[\s/.-]+/)`), so one `STOPWORDS`
+  entry kills `"legal/compliance"` outright via the whole-phrase reject —
+  Python needed a second, separate double-count-path fix for the same
+  slash-compound shape because its per-word stopword check only applies to
+  space-separated phrases.
+
+Curating `"apache"` then exposed a **third, engine-specific** cascade:
+`job_desc_directv.txt`'s three "Apache Airflow" mentions previously
+occupied a slot in the top-40 ranking cutoff; freeing that slot pulled in
+two previously-hidden fragments with no Python-side twin at all (different
+regex shapes there): `"tier"` (Roman-numeral-broken half of "Tier III
+infrastructure support" — a support-level descriptor, not a skill) and
+`"n4"` (a bare compensation pay-band code, `"Top (N4): $140,875 -
+$211,255"`). Both stoplisted to `SOFT_SKILLS`.
+
+Corpus-wide diff (all 885 `job_desc_*.txt`, before/after via `git stash`):
+**50 files changed, 56 noise items removed, 1 addition** — `"mfa"`
+(Multi-Factor Authentication) surfacing in the same directv-adjacent
+cascade slot, a genuine skill neither engine curates, left alone by design
+(same judgment call as the Python side's `"sonicwall"`/`"configuration
+control boards"` cascade finds — real content freed by a ranking slot is
+not a bug to suppress).
+
+---
+
 ## 4. AI layer — engineering decisions
 
 - **Transport**: raw `fetch` to `POST https://api.anthropic.com/v1/messages`

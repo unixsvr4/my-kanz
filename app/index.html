@@ -379,6 +379,10 @@ const KEYWORD_DB = {
   },
   "Data & Messaging": {
     "kafka": ["kafka"], "postgresql": ["postgresql", "postgres"], "mysql": ["mysql"],
+    // Bare "Apache" recurs standalone (Apache/Tomcat/Nginx web-server stacks,
+    // "Apache, Weblogic, Websphere" middleware lists) — distinct from the
+    // Apache-prefixed projects already curated (Kafka/Spark/Airflow above).
+    "apache": ["apache", "apache http server", "apache httpd", "apache2"],
     "redis": ["redis"], "mongodb": ["mongodb", "mongo"], "rabbitmq": ["rabbitmq"],
     "airflow": ["airflow"], "spark": ["spark"], "cassandra": ["cassandra"],
     "snowflake": ["snowflake"], "data lake": ["data lake", "data lakes", "lakehouse"],
@@ -394,6 +398,7 @@ const KEYWORD_DB = {
     "load balancing": ["load balancing", "load balancer", "load balancers", "nginx", "haproxy"],
     "vpn": ["vpn", "الشبكة الافتراضية الخاصة"], "firewall": ["firewall", "firewalls", "fw", "جدار الحماية"],
     "windows": ["windows server", "windows"], "bgp": ["bgp"], "cilium": ["cilium"], "vlan": ["vlan", "vlans"],
+    "sd-wan": ["sd-wan", "sdwan", "sd wan"],
   },
   "Security & Compliance": {
     "security": ["security", "cybersecurity", "devsecops", "الأمن", "الأمن السيبراني"], "encryption": ["encryption", "tls", "ssl", "التشفير"],
@@ -409,6 +414,12 @@ const KEYWORD_DB = {
     "cis": ["cis", "cis benchmarks"], "sca": ["sca", "software composition analysis"],
     "soar": ["soar"], "xdr": ["xdr"], "sox": ["sox", "sarbanes-oxley"], "fisma": ["fisma"],
     "cks": ["cks"], "cspm": ["cspm"],
+    // Microsoft rebranded Azure AD -> Entra ID in 2023; JDs use both names,
+    // sometimes both at once ("Azure AD/Entra ID") — "ad/entra" ports the
+    // Python fix's bare slash-fragment alias so the exact-match CURATED_TOKENS
+    // check catches it directly (its parts aren't independently curated).
+    "azure ad": ["azure ad", "azuread", "entra id", "entra", "microsoft entra",
+      "microsoft entra id", "ad/entra"],
   },
   "AI/ML Ops": {
     "mlops": ["mlops", "ml ops"], "llm": ["llm", "llms", "large language model", "نماذج اللغة الكبيرة"],
@@ -419,6 +430,7 @@ const KEYWORD_DB = {
   },
   "Delivery & Collaboration": {
     "agile": ["agile", "scrum", "kanban"], "jira": ["jira"], "confluence": ["confluence"],
+    "slack": ["slack"],
     "itil": ["itil", "itsm"],
     "documentation": ["documentation", "document", "التوثيق"], "mentoring": ["mentoring", "mentor", "mentorship", "التوجيه", "الإرشاد"],
     "cross-functional": ["cross-functional", "cross functional", "متعدد الوظائف"],
@@ -450,7 +462,11 @@ const STOPWORDS = new Set(("a an and or of to in for with on at by the is are wa
  // job-title & generic-aptitude words: a title is not a skill, in any profession
  + "senior junior principal staff head engineer engineers developer developers manager managers analyst analysts "
  + "specialist consultant coordinator director recruiter mastery discipline solid ops infrastructure player "
- + "ultimately high quality actionable ")
+ + "ultimately high quality actionable "
+ // "legal" is generic filler ("legal/compliance frameworks", "MetLife Legal
+ // Plans") that shadows the already-curated "compliance" match — same
+ // bucket as the job-title words above, never a skill by itself.
+ + "legal ")
  .trim().split(/\s+/));
 
 /* Arabic function words / pronouns / generic-aptitude & job-title words —
@@ -737,7 +753,18 @@ const SOFT_SKILLS = new Set(["communication","communication skills","verbal comm
  // just an isolated snippet) that it never forms a candidate at all here —
  // only an artificial standalone "Possible Extension" line leaks the bare
  // fragment "extension", a shape that doesn't occur in the real document.
- "additional notes"]);
+ "additional notes",
+ // 889-JD-corpus round: curating "apache" (job_desc_directv.txt has three
+ // "Apache Airflow" mentions) frees a ranking slot in the top-40 cutoff,
+ // which pulls in two previously-hidden orphan/boilerplate fragments —
+ // same collateral-cascade shape as the Python port's own "operational
+ // support" fix. "tier" is the Roman-numeral-broken half of "Tier III
+ // infrastructure support" (a support-level descriptor, not a skill);
+ // "n4" is a compensation pay-band code ("Top (N4): $140,875 - $211,255"),
+ // same bucket as salary-range boilerplate. Neither leaks in the Python
+ // engine (different Title-Case/number-adjacency regex shapes), so neither
+ // has a Python-side twin to port from — found only by this cascade check.
+ "tier", "n4"]);
 ["مهارات التواصل","التواصل","العمل الجماعي","روح الفريق","العمل ضمن فريق","القيادة","حل المشكلات",
  "إدارة الوقت","الاهتمام بالتفاصيل","التفكير النقدي","المرونة","الإبداع","الدافعية","الالتزام",
  "الأمانة","العمل تحت الضغط","التعامل مع ضغط العمل","بناء العلاقات","التفكير الاستراتيجي",
