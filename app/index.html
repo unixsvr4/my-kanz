@@ -942,7 +942,11 @@ const LEGAL_MARKERS = new RegExp("(equal (employment )?opportunity employer|prou
  + "authorized to work|(does not|will not|unable to) (currently )?(sponsor|provide sponsorship|offer visa)|"
  + "visa sponsorship|notice at collection|candidates residing in|background checks? (for|will)|e-?verify|"
  + "drug-?free workplace|your base (pay|salary) is one part|reasonable accommodations?|aware of fraudsters|"
- + "recruitment fraud)", "i");
+ // bare "Disclaimer:" opener — near-universal legal/comp-caveat header
+ // (job_desc_oracle_sre.txt and 9+ other corpus JDs: sometimes alone on its
+ // own line, sometimes leading a line of caveat prose). Ported from the
+ // matching addition to the Python engine's _LEGAL_PARA_RE.
+ + "recruitment fraud|^\\s*disclaimer\\b)", "i");
 const AT_COMPANY_PITCH = /^At\s+[A-Z][\w&.'-]*(?:\s+[A-Z][\w&.'-]*){0,2},?\s+(?:we|our|you)\b/;
 /* UNLABELED company-pitch lines — the convention when a scraped posting has no
    intro header at all: the brand narrative sits directly below the "About the

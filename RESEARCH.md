@@ -1355,6 +1355,51 @@ not a bug to suppress).
 
 ---
 
+### 3.24 2026-08-07 sync: a sixteenth real-world JD (Oracle Health SRE) — the bare "Disclaimer:" header round
+
+`job_desc_oracle_sre.txt` scored 44.0% on the Python engine despite 98.3%
+curated match — a bare `Disclaimer:` header (immunization/occupational-health
+caveat, benefit list, comp range, and Oracle's internal `Career Level - IC3`
+leveling code) sat past every existing tail-cutter and leaked `disclaimer`,
+`ic3`, and `immunization/occupational` into the dynamic-phrase denominator.
+Fixed on the Python side (`my-resumes` commit `9941816`) by adding a
+`^[ \t]*Disclaimer\b` alternative to `_LEGAL_PARA_RE`; corpus-wide diff there
+(886 JDs): 6 files, 22 items removed, 0 added.
+
+Ported the identical marker to this engine's `LEGAL_MARKERS` (the direct
+counterpart of Python's `_LEGAL_PARA_RE` — both are line-scoped
+truncate-from-earliest-match cutters, so no mechanics-difference judgment
+call was needed here, unlike most prior rounds): added `^\s*disclaimer\b` to
+the alternation. `LEGAL_MARKERS.test(l)` runs per raw (untrimmed) line via
+`lines.findIndex`, so the `\s*` (not `[ \t]*`) covers any leading whitespace
+the same way.
+
+Corpus-wide diff (all 886 `job_desc_*.txt`, before/after via `git stash` +
+the scratch Node harness): **3 files changed, 5 items removed, 0 added** —
+`job_desc_oracle_sre-bak.txt` (`immunization/occupational`, matching the
+Python find exactly); `job_desc_oracle_sre_trenton.txt` (`administration`,
+`language` — this engine's Title-Case merge splits the same trailing
+`Linux Administration` / `Python Programming Language` tag-recap block the
+Python side found differently, into single trailing words instead of
+two-word phrases, but it's the identical redundant post-disclaimer tag block
+being cut); and a fresh, Python-side-unconfirmed find,
+`job_desc_freewheel.txt` (`back-end development`, `software development` —
+Freewheel's own trailing `Technical Requirements; Back-End Development;
+Software Development` tag recap, sitting after its own `Disclaimer:` line).
+All three verified by `grep`-ing the phrase back into the raw JD: every
+removal is either the confirmed boilerplate caveat text or a redundant
+auto-generated skills-tag recap that restates content already present
+earlier in the real Required-Skills section (so no unique signal is lost).
+
+Also verified, per the base-resume side of this round: the JD's remaining
+dynamic misses (`fhir`, `hl7`, `configmaps/secrets`, `helm/kustomize`,
+`image/dependency`, `images/registries`, `requests/limits`) were genuine
+JD-specific phrasings, not noise — confirmed all but `fhir` were real,
+already-practiced skills and added directly to `abdoul_aw_resume_open.txt`
+rather than touched in either scorer.
+
+---
+
 ## 4. AI layer — engineering decisions
 
 - **Transport**: raw `fetch` to `POST https://api.anthropic.com/v1/messages`
